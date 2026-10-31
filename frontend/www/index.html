@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. // A.R.I.A. Hardware Integration HUD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       BOOT SEQUENCE OVERLAY & INITIALIZE J.A.R.V.I.S. SCREEN
+       ======================================================================== -->
+  <div id="bootOverlay">
+    <!-- Screen 1: User interaction unlock button -->
+    <div class="init-screen-box" id="initStartScreen">
+      <div class="init-arc-symbol">
+        <div class="init-arc-core"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 3px;">
+        STARK INDUSTRIES // J.A.R.V.I.S.
+      </div>
+      <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">
+        A.R.I.A HARDWARE AUTOMATION MATRIX ONLINE
+      </div>
+      <button class="init-btn" id="startJarvisBtn">⚡ INITIALIZE J.A.R.V.I.S.</button>
+    </div>
+
+    <!-- Screen 2: Terminal initialization lines -->
+    <div class="boot-box" id="bootTerminalBox">
+      <div class="boot-title">J.A.R.V.I.S. // CORE BOOTSTRAP</div>
+      <div class="boot-lines" id="bootTerminalLines"></div>
+      <div class="boot-progress-bar-wrap">
+        <div class="boot-progress-bar" id="bootProgressBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       STANDBY OVERLAY
+       ======================================================================== -->
+  <div id="standbyOverlay">
+    <div class="standby-card">
+      <div class="standby-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <div class="standby-title">STANDBY MODE ACTIVE</div>
+      <div class="standby-desc">System cores idling to conserve power.<br>Say <strong>"Jarvis"</strong> or click below to resume full operational HUD.</div>
+      <button class="wake-btn" id="wakeButton">WAKE SYSTEM</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       VOICE SETTINGS PANEL (HUD DRAWER)
+       ======================================================================== -->
+  <div id="settingsPanel">
+    <div class="settings-title">
+      <span>VOICE & AUDIO SYNTHESIS</span>
+      <span id="closeSettingsBtn" style="cursor: pointer; color: var(--red);">✕</span>
+    </div>
+    <div class="setting-item">
+      <label>Preferred Vocal Synthesis Voice:</label>
+      <select id="voiceSelect" class="setting-select"></select>
+    </div>
+    <div class="setting-item">
+      <div class="setting-row">
+        <label>Speech Pitch:</label>
+        <span id="pitchVal" style="font-family: var(--font-mono); color: var(--cyan);">0.85</span>
+      </div>
+      <input type="range" id="pitchSlider" class="setting-slider" min="0.5" max="1.5" step="0.05" value="0.85">
+    </div>
+    <div class="setting-item">
+      <div class="setting-row">
+        <label>Speech Rate:</label>
+        <span id="rateVal" style="font-family: var(--font-mono); color: var(--cyan);">0.95</span>
+      </div>
+      <input type="range" id="rateSlider" class="setting-slider" min="0.6" max="1.4" step="0.05" value="0.95">
+    </div>
+    <div class="setting-item" style="margin-top: 4px;">
+      <button class="hud-btn" id="previewVoiceBtn" style="justify-content: center;">
+        ▶ Test Vocal Synthesis
+      </button>
+    </div>
+    <div style="margin: 16px 0 12px 0; border-top: 1px dashed var(--border-cyan);"></div>
+    <div class="settings-title">
+      <span>BACKEND / HARDWARE SERVER</span>
+      <span class="status-chip green" id="backendChipStatus" style="font-size: 0.65rem; padding: 2px 6px;">READY</span>
+    </div>
+    <div class="setting-item">
+      <label>Backend URL (Node / Express):</label>
+      <input type="text" id="backendUrlInput" value="http://localhost:3000" placeholder="http://localhost:3000" style="width: 100%; box-sizing: border-box; background: rgba(0,229,255,0.06); border: 1px solid var(--border-cyan); color: #fff; padding: 6px 10px; font-family: var(--font-mono); font-size: 0.8rem; border-radius: 4px;">
+    </div>
+    <div class="setting-item">
+      <label>API Key (x-api-key header):</label>
+      <input type="password" id="backendApiKeyInput" value="jarvis_secure_token_8899" placeholder="Enter API Key" style="width: 100%; box-sizing: border-box; background: rgba(0,229,255,0.06); border: 1px solid var(--border-cyan); color: #fff; padding: 6px 10px; font-family: var(--font-mono); font-size: 0.8rem; border-radius: 4px;">
+    </div>
+    <div class="setting-item" style="display: flex; gap: 8px; margin-top: 6px;">
+      <button class="hud-btn" id="testBackendBtn" style="flex: 1; justify-content: center;">
+        ⚡ Test Connection
+      </button>
+      <button class="hud-btn" id="saveBackendBtn" style="flex: 1; justify-content: center;">
+        💾 Save Config
+      </button>
+    </div>
+    <div id="backendFeedbackTxt" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--cyan); margin-top: 6px; min-height: 18px;"></div>
+  </div>
+
+  <!-- ========================================================================
+       TOP STATUS BAR
+       ======================================================================== -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-logo"></div>
+      <div class="brand-title">J.A.R.V.I.S. <span>// A.R.I.A</span></div>
+      <div class="sub-brand">HOME & HARDWARE MATRIX</div>
+    </div>
+
+    <!-- System Status Chips -->
+    <div class="chips-group">
+      <div class="status-chip amber" id="chipMic" title="Speech Recognition Engine">
+        <div class="chip-dot"></div> MIC: <span id="chipMicTxt">READY</span>
+      </div>
+      <div class="status-chip green" id="chipSerial" title="Virtual Serial Port Link">
+        <div class="chip-dot"></div> SERIAL: <span id="chipSerialTxt">COM3 9600</span>
+      </div>
+      <div class="status-chip green" id="chipBackend" title="Backend REST and WebSocket Status">
+        <div class="chip-dot"></div> BACKEND: <span id="chipBackendTxt">ONLINE</span>
+      </div>
+      <div class="status-chip green" id="chipArduino" title="Hardware Controller">
+        <div class="chip-dot"></div> ARDUINO: <span id="chipArduinoTxt">READY</span>
+      </div>
+      <div class="status-chip green" id="chipSpeech" title="Speech Synthesis Feedback">
+        <div class="chip-dot"></div> SPEECH: <span id="chipSpeechTxt">ACTIVE</span>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <button class="hud-btn" id="settingsToggleBtn" title="Voice Configuration & Sliders">
+        ⚙️ SETTINGS
+      </button>
+      <button class="hud-btn" id="muteToggleBtn" title="Toggle Spoken Speech Confirmations">
+        <span id="muteIcon">🔊</span> <span id="muteLabel">VOICE ON</span>
+      </button>
+      <div class="clock-display" id="hudClock">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN HUD CONTENT: 3 COLUMNS
+       ======================================================================== -->
+  <main class="hud-content">
+    
+    <!-- LEFT COLUMN: Diagnostics, Metrics, Scrolling Command Log -->
+    <section class="left-column">
+      
+      <!-- Diagnostics Panel -->
+      <div class="hud-box diag-panel">
+        <div class="panel-header">
+          <span>DIAGNOSTICS & FAULT SIMULATION</span>
+          <span>DEV-01</span>
+        </div>
+        <div class="diag-row">
+          <span>Arduino Disconnected</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleDisconnect">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="diag-row">
+          <span>Add Recognition Noise (30%)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleNoise">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Performance & Latency Telemetry -->
+      <div class="hud-box metrics-panel">
+        <div class="panel-header">
+          <span>SERIAL BUS TELEMETRY</span>
+          <span id="latestLatencyBadge">-- MS</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="statTotalCmds">0</div>
+            <div class="stat-lbl">Commands</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statSuccessRate">100%</div>
+            <div class="stat-lbl">ACK Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statAvgLatency">0 ms</div>
+            <div class="stat-lbl">Avg Latency</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="latencyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Terminal Command Log -->
+      <div class="hud-box log-panel">
+        <div class="panel-header">
+          <span>SERIAL LOG & AUDIT FEED</span>
+          <span id="logCounter">0 ENTRIES</span>
+        </div>
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: Arc Reactor Core, Directive Banner, Subtitles, Waveform -->
+    <section class="center-column">
+      
+      <!-- Dynamic Directive Status Banner -->
+      <div class="directive-banner hud-box" id="directiveBanner">
+        <div class="directive-title" id="directiveMain">STANDBY // READY FOR DIRECTIVE</div>
+        <div class="directive-sub" id="directiveDetail">SPEECH RECOGNITION ARMED // LISTENING TO AUDIO INPUT</div>
+      </div>
+
+      <!-- Live Typing Subtitles -->
+      <div class="subtitles-box hud-box" id="subtitlesBox">
+        <span class="subtitles-tag">J.A.R.V.I.S. &gt;&gt;</span>
+        <div class="subtitles-text">
+          <span id="subtitlesContent">Initializing interface...</span>
+          <span class="cursor-blink" id="subtitlesCursor"></span>
+        </div>
+      </div>
+
+      <!-- Holographic Arc Reactor Core -->
+      <div class="reactor-container" id="reactorContainer">
+        <svg class="reactor-svg" viewBox="0 0 250 250">
+          <defs>
+            <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="35%" stop-color="#00e5ff"/>
+              <stop offset="70%" stop-color="#0066aa"/>
+              <stop offset="100%" stop-color="transparent"/>
+            </radialGradient>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e5ff"/>
+              <stop offset="100%" stop-color="#1ea8ff"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Outer Static Glow Ring -->
+          <circle cx="125" cy="125" r="118" fill="none" stroke="rgba(0, 229, 255, 0.15)" stroke-width="1.5"/>
+          <circle cx="125" cy="125" r="110" fill="none" stroke="rgba(0, 229, 255, 0.25)" stroke-width="1" stroke-dasharray="3 6"/>
+
+          <!-- Outer Segmented Ring -->
+          <g class="ring-outer">
+            <circle cx="125" cy="125" r="98" fill="none" stroke="url(#ringGrad)" stroke-width="3" stroke-dasharray="14 18"/>
+            <circle cx="125" cy="125" r="90" fill="none" stroke="rgba(0, 229, 255, 0.4)" stroke-width="1.5" stroke-dasharray="40 10"/>
+          </g>
+
+          <!-- Middle Segmented Ring -->
+          <g class="ring-segmented">
+            <circle cx="125" cy="125" r="76" fill="none" stroke="#00e5ff" stroke-width="4" stroke-dasharray="25 35"/>
+            <polygon points="125,55 132,68 118,68" fill="#00e5ff"/>
+            <polygon points="125,195 132,182 118,182" fill="#00e5ff"/>
+            <polygon points="55,125 68,118 68,132" fill="#00e5ff"/>
+            <polygon points="195,125 182,118 182,132" fill="#00e5ff"/>
+          </g>
+
+          <!-- Inner Precision Tick Ring -->
+          <g class="ring-inner-ticks">
+            <circle cx="125" cy="125" r="54" fill="none" stroke="#1ea8ff" stroke-width="2" stroke-dasharray="6 8"/>
+            <circle cx="125" cy="125" r="46" fill="none" stroke="rgba(255, 255, 255, 0.4)" stroke-width="1" stroke-dasharray="2 4"/>
+          </g>
+
+          <!-- Central Core -->
+          <g class="reactor-core">
+            <circle cx="125" cy="125" r="36" fill="url(#coreGlow)"/>
+            <circle cx="125" cy="125" r="28" fill="#021426" stroke="#00e5ff" stroke-width="2"/>
+            <polygon points="125,108 140,134 110,134" fill="none" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="125" cy="125" r="7" fill="#ffffff" filter="drop-shadow(0 0 8px #ffffff)"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Live Audio Waveform Canvas -->
+      <div class="waveform-wrapper">
+        <span class="waveform-label">ACOUSTIC & VOCAL SPECTROGRAM // SENSOR CH-1</span>
+        <canvas id="audioVisualizer"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: 10 Interactive Appliances Grid -->
+    <section class="right-column">
+      <div class="hud-box hardware-panel">
+        <div class="panel-header">
+          <span>HOME AUTOMATION MATRIX [10 DEVICES]</span>
+          <span style="font-family: var(--font-mono); font-size: 9px;">TAP TO TOGGLE</span>
+        </div>
+
+        <div class="appliances-grid">
+          
+          <!-- 1. LIGHT (D7) -->
+          <div class="appliance-card" id="card_LIGHT" data-appliance="LIGHT">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">💡</span>
+                <span class="appliance-title">LIGHT</span>
+                <span class="pin-tag">D7</span>
+              </div>
+              <span class="state-pill" id="pill_LIGHT">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="bulb-glow-circle"></div>
+            </div>
+          </div>
+
+          <!-- 2. FAN (D9) -->
+          <div class="appliance-card" id="card_FAN" data-appliance="FAN">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🌀</span>
+                <span class="appliance-title">FAN</span>
+                <span class="pin-tag">D9</span>
+              </div>
+              <span class="state-pill" id="pill_FAN">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <svg class="fan-svg" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="4" fill="#00e5ff"/>
+                <path d="M20,20 C20,6 26,4 28,7 C30,10 27,15 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+                <path d="M20,20 C10,25 8,30 11,33 C14,35 19,33 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+                <path d="M20,20 C15,12 10,13 8,16 C7,19 12,23 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- 3. MOTOR (D8) -->
+          <div class="appliance-card" id="card_MOTOR" data-appliance="MOTOR">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">⚙️</span>
+                <span class="appliance-title">9V MOTOR</span>
+                <span class="pin-tag">D8</span>
+              </div>
+              <span class="state-pill" id="pill_MOTOR">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="motor-icon-anim">
+                <div class="motor-blade"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. AC (D10) -->
+          <div class="appliance-card" id="card_AC" data-appliance="AC">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">❄️</span>
+                <span class="appliance-title">AIR COND.</span>
+                <span class="pin-tag">D10</span>
+              </div>
+              <span class="state-pill" id="pill_AC">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="ac-temp-display">
+                <span>❄️</span> <span id="acTempText">28.0°C</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. TV (D11) -->
+          <div class="appliance-card" id="card_TV" data-appliance="TV">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">📺</span>
+                <span class="appliance-title">TELEVISION</span>
+                <span class="pin-tag">D11</span>
+              </div>
+              <span class="state-pill" id="pill_TV">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="tv-screen" id="tvScreen">STANDBY</div>
+            </div>
+          </div>
+
+          <!-- 6. HEATER (D12) -->
+          <div class="appliance-card" id="card_HEATER" data-appliance="HEATER">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🔥</span>
+                <span class="appliance-title">HEATER</span>
+                <span class="pin-tag">D12</span>
+              </div>
+              <span class="state-pill" id="pill_HEATER">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="heater-temp-display">
+                <span>🔥</span> <span id="heaterTempText">24.0°C</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. NIGHT LAMP (D6) -->
+          <div class="appliance-card" id="card_NIGHT_LAMP" data-appliance="NIGHT_LAMP">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🌙</span>
+                <span class="appliance-title">NIGHT LAMP</span>
+                <span class="pin-tag">D6</span>
+              </div>
+              <span class="state-pill" id="pill_NIGHT_LAMP">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="night-lamp-orb"></div>
+            </div>
+          </div>
+
+          <!-- 8. DOOR LOCK (D5) -->
+          <div class="appliance-card" id="card_DOOR" data-appliance="DOOR">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🔒</span>
+                <span class="appliance-title">DOOR LOCK</span>
+                <span class="pin-tag">D5</span>
+              </div>
+              <span class="state-pill" id="pill_DOOR">LOCKED</span>
+            </div>
+            <div class="mini-stage">
+              <div class="lock-icon-box" id="lockGraphic">🔒 LOCKED</div>
+            </div>
+          </div>
+
+          <!-- 9. CURTAINS (D4) -->
+          <div class="appliance-card" id="card_CURTAINS" data-appliance="CURTAINS">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🪟</span>
+                <span class="appliance-title">CURTAINS</span>
+                <span class="pin-tag">D4</span>
+              </div>
+              <span class="state-pill" id="pill_CURTAINS">CLOSED</span>
+            </div>
+            <div class="mini-stage">
+              <div class="curtain-stage">
+                <div class="curtain-panel left"></div>
+                <div class="curtain-panel right"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 10. MUSIC SPEAKER -->
+          <div class="appliance-card" id="card_MUSIC" data-appliance="MUSIC">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🎵</span>
+                <span class="appliance-title">SPEAKER</span>
+                <span class="pin-tag">D3</span>
+              </div>
+              <span class="state-pill" id="pill_MUSIC">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="equalizer-bars">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       BOTTOM COMMAND & CONTROL BAR
+       ======================================================================== -->
+  <footer class="bottom-bar">
+    <!-- Row 1: Command Bar & Large Mic Button -->
+    <div class="command-input-row">
+      <div class="mic-button-wrapper">
+        <div class="mic-pulse-ring"></div>
+        <button class="mic-button" id="micBtn" title="Click to Speak Directive (Web Speech API)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="input-field-wrapper">
+        <span class="input-terminal-icon">&gt;</span>
+        <input type="text" class="command-input" id="commandTextInput" 
+               placeholder="Speak or type a command (e.g. 'Turn on the light', 'Movie mode', 'Tell me a joke')..." 
+               autocomplete="off" spellcheck="false">
+      </div>
+
+      <button class="action-btn-primary" id="sendBtn">
+        <span>TRANSMIT</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+
+      <button class="export-btn" id="exportCsvBtn" title="Download Audit CSV Log">
+        📥 EXPORT CSV
+      </button>
+    </div>
+
+    <!-- Row 2: Quick-Action Holographic Chips & Scenes -->
+    <div class="quick-chips-row">
+      <span class="quick-chips-label">SCENES & MACROS:</span>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_MOVIE">🎬 Movie Mode</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_GOOD_NIGHT">🌙 Good Night</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_IM_HOME">🏠 I'm Home</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_PARTY">🎉 Party Mode</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_WAKE_UP">☀️ Wake Up</button>
+      <button class="quick-chip" data-cmd="STATUS">📊 Status</button>
+      <button class="quick-chip" data-cmd="ALL_ON">⚡ All ON</button>
+      <button class="quick-chip" data-cmd="ALL_OFF">⚡ All OFF</button>
+      <button class="quick-chip" data-cmd="DOOR_UNLOCK">🔓 Unlock Door</button>
+      <button class="quick-chip" data-cmd="JOKE">🃏 Joke</button>
+      <button class="quick-chip" data-cmd="STANDBY">💤 Standby</button>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       JAVASCRIPT ARCHITECTURE
+       ======================================================================== -->
+  <script src="capacitor.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

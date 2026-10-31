@@ -1,0 +1,11 @@
+{
+  "appId": "com.aria.jarvis",
+  "appName": "J.A.R.V.I.S. ARIA",
+  "webDir": "frontend/www",
+  "server": {
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

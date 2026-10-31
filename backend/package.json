@@ -1,0 +1,32 @@
+{
+  "name": "aria-jarvis-backend",
+  "version": "1.0.0",
+  "description": "J.A.R.V.I.S. / A.R.I.A Hardware Controller Backend with WebSocket & Serial",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "jarvis",
+    "aria",
+    "arduino",
+    "voice-assistant",
+    "serialport",
+    "websocket"
+  ],
+  "author": "A.R.I.A Project",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "serialport": "^13.0.0",
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.8.1"
+  }
+}

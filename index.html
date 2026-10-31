@@ -1,0 +1,3475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. // A.R.I.A. Hardware Integration HUD</title>
+  <style>
+    /* ==========================================================================
+       J.A.R.V.I.S. / A.R.I.A HOLOGRAPHIC HUD STYLES
+       Color Palette: Near-Black Navy (#02070d), Cyan (#00e5ff), Electric Blue (#1ea8ff)
+       Font: System futuristic fallbacks ("Segoe UI", sans-serif) - No external fonts
+       ========================================================================== */
+    :root {
+      --bg-dark: #02070d;
+      --bg-card: rgba(3, 16, 30, 0.78);
+      --bg-card-hover: rgba(5, 25, 48, 0.88);
+      --cyan: #00e5ff;
+      --cyan-bright: #70f7ff;
+      --cyan-glow: rgba(0, 229, 255, 0.45);
+      --cyan-dim: rgba(0, 229, 255, 0.15);
+      --blue: #1ea8ff;
+      --green: #00ff9d;
+      --green-glow: rgba(0, 255, 157, 0.4);
+      --amber: #ffb703;
+      --amber-glow: rgba(255, 183, 3, 0.4);
+      --red: #ff2a5f;
+      --red-glow: rgba(255, 42, 95, 0.45);
+      --text-main: #dcf6ff;
+      --text-dim: #608fa8;
+      --border-cyan: rgba(0, 229, 255, 0.28);
+      --font-hud: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --font-mono: "Consolas", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(2, 25, 48, 0.5) 0%, rgba(1, 7, 15, 0.95) 75%, #010408 100%),
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+      color: var(--text-main);
+      font-family: var(--font-hud);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Subtle CRT Scanlines & Holographic Vignette */
+    body::before {
+      content: " ";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.12),
+        rgba(0, 0, 0, 0.12) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 990;
+    }
+
+    body::after {
+      content: " ";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+      pointer-events: none;
+      z-index: 991;
+    }
+
+    /* Party Mode Holographic Flashing */
+    body.party-mode-active {
+      animation: partyHue 2.5s infinite linear;
+    }
+    @keyframes partyHue {
+      0% { filter: hue-rotate(0deg); }
+      50% { filter: hue-rotate(180deg) saturate(1.8); }
+      100% { filter: hue-rotate(360deg); }
+    }
+
+    /* Holographic Border Cuts / Framing */
+    .hud-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-cyan);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.07), inset 0 0 12px rgba(0, 229, 255, 0.04);
+      position: relative;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-box::before, .hud-box::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: var(--cyan);
+      pointer-events: none;
+    }
+    .hud-box::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid var(--cyan);
+      border-left: 2px solid var(--cyan);
+    }
+    .hud-box::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid var(--cyan);
+      border-right: 2px solid var(--cyan);
+    }
+
+    .panel-header {
+      padding: 6px 12px;
+      background: rgba(0, 229, 255, 0.08);
+      border-bottom: 1px solid var(--border-cyan);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       TOP BAR: Header, Brand, Status Chips, Settings, Clock
+       ========================================================================== */
+    header.top-bar {
+      height: 48px;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: rgba(2, 10, 20, 0.9);
+      border-bottom: 1px solid var(--border-cyan);
+      box-shadow: 0 2px 10px rgba(0, 229, 255, 0.1);
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-logo::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      color: #ffffff;
+      text-shadow: 0 0 8px var(--cyan);
+    }
+    .brand-title span {
+      color: var(--cyan);
+    }
+
+    .sub-brand {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      padding-left: 6px;
+      border-left: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .chips-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 1px;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #777;
+    }
+
+    .status-chip.green {
+      border-color: rgba(0, 255, 157, 0.4);
+      color: var(--green);
+    }
+    .status-chip.green .chip-dot {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .status-chip.amber {
+      border-color: rgba(255, 183, 3, 0.4);
+      color: var(--amber);
+    }
+    .status-chip.amber .chip-dot {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+    }
+
+    .status-chip.red {
+      border-color: rgba(255, 42, 95, 0.5);
+      color: var(--red);
+    }
+    .status-chip.red .chip-dot {
+      background: var(--red);
+      box-shadow: 0 0 6px var(--red);
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-btn {
+      background: transparent;
+      border: 1px solid var(--border-cyan);
+      color: var(--cyan);
+      padding: 4px 10px;
+      font-size: 10px;
+      font-family: var(--font-hud);
+      letter-spacing: 1px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+    .hud-btn:hover {
+      background: rgba(0, 229, 255, 0.15);
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+    .hud-btn.active {
+      background: rgba(0, 229, 255, 0.25);
+      border-color: var(--cyan-bright);
+      color: #ffffff;
+    }
+
+    .clock-display {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--cyan);
+      text-shadow: 0 0 6px var(--cyan-glow);
+    }
+
+    /* Voice Settings Drawer / Modal */
+    #settingsPanel {
+      position: absolute;
+      top: 50px;
+      right: 16px;
+      width: 320px;
+      background: rgba(2, 14, 28, 0.96);
+      border: 1px solid var(--cyan);
+      border-radius: 4px;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.3);
+      padding: 12px;
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      backdrop-filter: blur(8px);
+    }
+    #settingsPanel.open {
+      display: flex;
+      animation: fadeInEntry 0.2s ease-out;
+    }
+    .settings-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid var(--border-cyan);
+      padding-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-select, .setting-slider {
+      background: #011222;
+      border: 1px solid var(--border-cyan);
+      color: var(--text-main);
+      padding: 4px;
+      border-radius: 3px;
+      font-family: var(--font-hud);
+      font-size: 11px;
+      outline: none;
+    }
+    .setting-slider {
+      width: 100%;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    /* ==========================================================================
+       MAIN CONTENT: 3 COLUMNS
+       ========================================================================== */
+    main.hud-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 290px 1fr 430px;
+      gap: 10px;
+      padding: 10px;
+      min-height: 0;
+      position: relative;
+    }
+
+    /* LEFT COLUMN: Diagnostics, Metrics, Scrolling Command Log */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .diag-panel {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .diag-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-hud);
+      letter-spacing: 0.5px;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-cyan);
+      transition: .3s;
+      border-radius: 18px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--text-dim);
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: rgba(255, 42, 95, 0.25);
+      border-color: var(--red);
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+      background-color: var(--red);
+      box-shadow: 0 0 6px var(--red);
+    }
+
+    .metrics-panel {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .stat-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      padding: 5px;
+      text-align: center;
+      border-radius: 3px;
+    }
+    .stat-val {
+      font-size: 14px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--cyan-bright);
+      text-shadow: 0 0 6px var(--cyan-glow);
+    }
+    .stat-lbl {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .chart-container {
+      position: relative;
+      height: 60px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(0, 229, 255, 0.12);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    canvas#latencyChart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .log-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .log-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.45;
+      color: #9cd4ed;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+    .log-feed::-webkit-scrollbar {
+      width: 4px;
+    }
+    .log-feed::-webkit-scrollbar-thumb {
+      background: var(--border-cyan);
+      border-radius: 2px;
+    }
+
+    .log-entry {
+      border-left: 2px solid var(--blue);
+      padding-left: 6px;
+      animation: fadeInEntry 0.25s ease-out;
+    }
+    .log-entry.ack {
+      border-left-color: var(--green);
+    }
+    .log-entry.err {
+      border-left-color: var(--red);
+    }
+    .log-entry.sys {
+      border-left-color: var(--amber);
+    }
+    .log-time {
+      color: var(--text-dim);
+      font-size: 9.5px;
+    }
+    .log-heard {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .log-cmd {
+      color: var(--cyan);
+    }
+    .log-reply {
+      color: var(--green);
+    }
+    .log-lat {
+      color: var(--amber);
+      font-size: 9.5px;
+    }
+
+    @keyframes fadeInEntry {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* CENTER COLUMN: Arc Reactor Core, Directive Banner, Subtitles, Waveform */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      padding: 6px;
+      min-height: 0;
+    }
+
+    .directive-banner {
+      width: 100%;
+      padding: 8px 14px;
+      text-align: center;
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid var(--border-cyan);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .directive-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      transition: all 0.3s ease;
+    }
+    .directive-sub {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    /* Live Subtitles Box */
+    .subtitles-box {
+      width: 100%;
+      min-height: 42px;
+      margin-top: 4px;
+      padding: 6px 12px;
+      background: rgba(0, 10, 24, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .subtitles-tag {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      color: var(--amber);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .subtitles-text {
+      font-size: 12px;
+      color: #ffffff;
+      font-family: var(--font-hud);
+      letter-spacing: 0.5px;
+      line-height: 1.3;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 6px;
+      height: 12px;
+      background: var(--cyan);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    /* Arc Reactor Visual Core */
+    .reactor-container {
+      position: relative;
+      width: 230px;
+      height: 230px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: auto 0;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .reactor-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 16px var(--cyan-glow));
+    }
+
+    .ring-outer {
+      transform-origin: 125px 125px;
+      animation: spinClockwise 20s linear infinite;
+    }
+    .ring-segmented {
+      transform-origin: 125px 125px;
+      animation: spinCounterClockwise 14s linear infinite;
+    }
+    .ring-inner-ticks {
+      transform-origin: 125px 125px;
+      animation: spinClockwise 8s linear infinite;
+    }
+    .reactor-core {
+      transform-origin: 125px 125px;
+      animation: pulseCore 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes spinClockwise {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinCounterClockwise {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes pulseCore {
+      0% { transform: scale(0.95); opacity: 0.85; filter: drop-shadow(0 0 10px var(--cyan)); }
+      100% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 25px var(--cyan-bright)); }
+    }
+
+    /* Sync Arc Reactor to Vocal Output */
+    .reactor-container.speaking {
+      filter: drop-shadow(0 0 35px var(--cyan-bright)) brightness(1.4);
+      transform: scale(1.06);
+    }
+    .reactor-container.speaking .reactor-core {
+      animation: speechPulse 0.35s infinite alternate;
+    }
+    @keyframes speechPulse {
+      0% { transform: scale(0.95); opacity: 0.8; filter: drop-shadow(0 0 15px var(--cyan)); }
+      100% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 35px #ffffff); }
+    }
+
+    .reactor-container.listening .ring-outer {
+      animation-duration: 4s;
+    }
+    .reactor-container.transmitting {
+      filter: brightness(1.7) saturate(1.8);
+      transform: scale(1.03);
+    }
+    .reactor-container.error-state {
+      filter: hue-rotate(140deg) brightness(1.3);
+    }
+
+    /* Audio Waveform Canvas */
+    .waveform-wrapper {
+      width: 100%;
+      max-width: 440px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-cyan);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    canvas#audioVisualizer {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .waveform-label {
+      position: absolute;
+      top: 3px;
+      left: 6px;
+      font-size: 8.5px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    /* RIGHT COLUMN: Home Automation & Hardware Grid */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .hardware-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .hardware-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .hardware-panel::-webkit-scrollbar-thumb {
+      background: var(--border-cyan);
+      border-radius: 2px;
+    }
+
+    /* Hardware Grid Layout */
+    .appliances-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .appliance-card {
+      background: rgba(1, 18, 33, 0.75);
+      border: 1px solid var(--border-cyan);
+      border-radius: 4px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    .appliance-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+    }
+    .appliance-card.active {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.22), inset 0 0 10px rgba(0, 229, 255, 0.08);
+      background: rgba(0, 26, 48, 0.85);
+    }
+
+    .appliance-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .appliance-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .appliance-icon {
+      font-size: 14px;
+    }
+    .appliance-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--text-main);
+    }
+    .pin-tag {
+      font-size: 8px;
+      font-family: var(--font-mono);
+      padding: 1px 4px;
+      background: rgba(0, 229, 255, 0.1);
+      border: 1px solid var(--border-cyan);
+      border-radius: 2px;
+      color: var(--cyan);
+    }
+    .state-pill {
+      font-size: 8.5px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+    }
+    .appliance-card.active .state-pill {
+      background: rgba(0, 229, 255, 0.25);
+      border: 1px solid var(--cyan);
+      color: var(--cyan-bright);
+      box-shadow: 0 0 6px var(--cyan-glow);
+    }
+
+    /* Miniature Visual Stages */
+    .mini-stage {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 10, 20, 0.4);
+      border: 1px dashed rgba(0, 229, 255, 0.15);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 1. Light Bulb */
+    .bulb-glow-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #333;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .appliance-card.active .bulb-glow-circle {
+      background: #ffeb3b;
+      box-shadow: 0 0 16px #ffeb3b, 0 0 30px #ff9800;
+    }
+
+    /* 2. Fan */
+    .fan-svg {
+      width: 32px;
+      height: 32px;
+      transform-origin: center;
+      transition: all 0.3s ease;
+    }
+    .appliance-card.active .fan-svg {
+      animation: spinFast 0.22s linear infinite;
+      filter: drop-shadow(0 0 6px var(--cyan));
+    }
+    @keyframes spinFast {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* 3. Motor */
+    .motor-icon-anim {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #546e7a;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .motor-blade {
+      width: 4px;
+      height: 18px;
+      background: var(--text-dim);
+      border-radius: 2px;
+    }
+    .appliance-card.active .motor-icon-anim {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+    .appliance-card.active .motor-blade {
+      background: var(--cyan);
+      animation: spinFast 0.18s linear infinite;
+    }
+
+    /* 4. AC */
+    .ac-temp-display {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .appliance-card.active .ac-temp-display {
+      color: #70f7ff;
+      text-shadow: 0 0 8px #00e5ff;
+    }
+
+    /* 5. TV */
+    .tv-screen {
+      width: 60px;
+      height: 32px;
+      background: #08121c;
+      border: 1px solid #204060;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 7.5px;
+      color: #335577;
+      position: relative;
+      overflow: hidden;
+    }
+    .appliance-card.active .tv-screen {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+      background: repeating-linear-gradient(0deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.1) 1px, transparent 1px, transparent 3px);
+      animation: tvFlicker 0.15s infinite;
+    }
+    @keyframes tvFlicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.88; }
+    }
+
+    /* 6. Heater */
+    .heater-temp-display {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .appliance-card.active .heater-temp-display {
+      color: #ff9800;
+      text-shadow: 0 0 8px #ff5722;
+    }
+
+    /* 7. Night Lamp */
+    .night-lamp-orb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #222;
+      transition: all 0.3s ease;
+    }
+    .appliance-card.active .night-lamp-orb {
+      background: #ffe082;
+      box-shadow: 0 0 16px #ffb300, 0 0 28px rgba(255, 179, 0, 0.6);
+    }
+
+    /* 8. Door Lock */
+    .lock-icon-box {
+      font-size: 16px;
+      color: var(--text-dim);
+      transition: all 0.25s ease;
+    }
+    .appliance-card.active .lock-icon-box {
+      color: var(--green);
+      filter: drop-shadow(0 0 6px var(--green));
+    }
+
+    /* 9. Curtains */
+    .curtain-stage {
+      width: 60px;
+      height: 32px;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      display: flex;
+      overflow: hidden;
+      border-radius: 2px;
+      background: #020b14;
+    }
+    .curtain-panel {
+      flex: 1;
+      height: 100%;
+      background: #1a3a5a;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .appliance-card.active .curtain-panel.left {
+      transform: translateX(-80%);
+    }
+    .appliance-card.active .curtain-panel.right {
+      transform: translateX(80%);
+    }
+
+    /* 10. Music Speaker */
+    .equalizer-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 24px;
+    }
+    .eq-bar {
+      width: 4px;
+      height: 4px;
+      background: var(--text-dim);
+      border-radius: 1px;
+      transition: height 0.15s ease;
+    }
+    .appliance-card.active .eq-bar {
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+      animation: eqJump 0.45s ease-in-out infinite alternate;
+    }
+    .appliance-card.active .eq-bar:nth-child(2) { animation-delay: 0.1s; }
+    .appliance-card.active .eq-bar:nth-child(3) { animation-delay: 0.25s; }
+    .appliance-card.active .eq-bar:nth-child(4) { animation-delay: 0.15s; }
+    .appliance-card.active .eq-bar:nth-child(5) { animation-delay: 0.3s; }
+    @keyframes eqJump {
+      0% { height: 4px; }
+      100% { height: 22px; }
+    }
+
+    /* ==========================================================================
+       BOTTOM BAR: Voice Command Bar, Large Mic Button, Action Chips, Controls
+       ========================================================================== */
+    footer.bottom-bar {
+      height: 126px;
+      min-height: 126px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(2, 9, 18, 0.95);
+      border-top: 1px solid var(--border-cyan);
+      box-shadow: 0 -2px 15px rgba(0, 229, 255, 0.08);
+      z-index: 100;
+    }
+
+    .command-input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mic-button-wrapper {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      flex-shrink: 0;
+    }
+
+    .mic-pulse-ring {
+      position: absolute;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border-radius: 50%;
+      border: 1px solid var(--cyan);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .mic-button {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, #022038 0%, #011222 100%);
+      border: 2px solid var(--cyan);
+      color: var(--cyan);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px var(--cyan-glow);
+      transition: all 0.25s ease;
+    }
+    .mic-button:hover {
+      box-shadow: 0 0 20px var(--cyan);
+      transform: scale(1.04);
+    }
+    .mic-button.listening {
+      background: radial-gradient(circle, #004d40 0%, #00251a 100%);
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 0 22px var(--green);
+      animation: micPulse 1.2s ease-in-out infinite;
+    }
+    .mic-button.listening .mic-pulse-ring {
+      border-color: var(--green);
+      animation: ringSpread 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    }
+
+    @keyframes micPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    @keyframes ringSpread {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .input-field-wrapper {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .command-input {
+      width: 100%;
+      height: 42px;
+      background: rgba(1, 15, 28, 0.75);
+      border: 1px solid var(--border-cyan);
+      border-radius: 4px;
+      padding: 0 14px 0 38px;
+      color: #ffffff;
+      font-family: var(--font-hud);
+      font-size: 13.5px;
+      letter-spacing: 0.8px;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+      outline: none;
+      transition: all 0.25s ease;
+    }
+    .command-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 6px rgba(0, 229, 255, 0.2);
+    }
+    .command-input::placeholder {
+      color: var(--text-dim);
+      font-size: 12.5px;
+    }
+
+    .input-terminal-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .action-btn-primary {
+      height: 42px;
+      padding: 0 18px;
+      background: rgba(0, 229, 255, 0.12);
+      border: 1px solid var(--cyan);
+      color: var(--cyan-bright);
+      font-family: var(--font-hud);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+      transition: all 0.2s ease;
+    }
+    .action-btn-primary:hover {
+      background: rgba(0, 229, 255, 0.25);
+      box-shadow: 0 0 18px var(--cyan-glow);
+    }
+
+    .export-btn {
+      height: 42px;
+      padding: 0 14px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-dim);
+      font-family: var(--font-hud);
+      font-size: 11px;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .export-btn:hover {
+      color: var(--text-main);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+    }
+
+    /* Quick Action Chips Row */
+    .quick-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .quick-chips-row::-webkit-scrollbar {
+      height: 3px;
+    }
+    .quick-chips-row::-webkit-scrollbar-thumb {
+      background: var(--border-cyan);
+    }
+    .quick-chips-label {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .quick-chip {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-cyan);
+      padding: 3px 9px;
+      font-size: 10px;
+      font-family: var(--font-hud);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: var(--cyan);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .quick-chip:hover {
+      background: rgba(0, 229, 255, 0.18);
+      border-color: var(--cyan-bright);
+      box-shadow: 0 0 8px var(--cyan-glow);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .quick-chip.scene-chip {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .quick-chip.scene-chip:hover {
+      background: rgba(255, 183, 3, 0.2);
+      border-color: #ffd166;
+      color: #fff;
+      box-shadow: 0 0 8px var(--amber-glow);
+    }
+
+    /* ==========================================================================
+       BOOT SEQUENCE OVERLAY & INITIALIZE J.A.R.V.I.S. BUTTON
+       ======================================================================== */
+    #bootOverlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #01050a;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+    #bootOverlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .init-screen-box {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .init-arc-symbol {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px dashed var(--cyan);
+      box-shadow: 0 0 35px var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spinClockwise 10s linear infinite;
+    }
+    .init-arc-core {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff, var(--cyan));
+      box-shadow: 0 0 20px var(--cyan);
+    }
+    .init-btn {
+      padding: 14px 34px;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.25) 0%, rgba(2, 16, 32, 0.9) 100%);
+      border: 2px solid var(--cyan);
+      color: #ffffff;
+      font-size: 15px;
+      font-family: var(--font-hud);
+      font-weight: 800;
+      letter-spacing: 3px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 25px var(--cyan-glow), inset 0 0 15px rgba(0, 229, 255, 0.2);
+      transition: all 0.3s ease;
+      animation: buttonPulse 2s infinite alternate;
+    }
+    .init-btn:hover {
+      background: var(--cyan);
+      color: #01050a;
+      box-shadow: 0 0 45px var(--cyan-bright);
+      transform: scale(1.05);
+    }
+    @keyframes buttonPulse {
+      0% { box-shadow: 0 0 20px var(--cyan-glow); }
+      100% { box-shadow: 0 0 40px var(--cyan); }
+    }
+
+    .boot-box {
+      width: 580px;
+      max-width: 90vw;
+      border: 1px solid var(--cyan);
+      background: rgba(2, 14, 28, 0.95);
+      padding: 24px;
+      border-radius: 4px;
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
+      position: relative;
+      display: none;
+    }
+    .boot-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--cyan);
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+      text-align: center;
+      text-shadow: 0 0 10px var(--cyan);
+    }
+    .boot-lines {
+      height: 140px;
+      overflow-y: hidden;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #79c5e8;
+      margin-bottom: 16px;
+    }
+    .boot-progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border-cyan);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .boot-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      box-shadow: 0 0 8px var(--cyan);
+      transition: width 0.1s linear;
+    }
+
+    /* STANDBY OVERLAY */
+    #standbyOverlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(1, 5, 12, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 995;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: all 0.4s ease;
+    }
+    #standbyOverlay.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .standby-card {
+      text-align: center;
+      max-width: 500px;
+      padding: 30px;
+      border: 1px solid var(--border-cyan);
+      background: rgba(2, 16, 32, 0.85);
+      border-radius: 6px;
+      box-shadow: 0 0 35px rgba(0, 229, 255, 0.2);
+    }
+    .standby-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 16px;
+      border: 2px dashed var(--cyan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spinClockwise 12s linear infinite;
+    }
+    .standby-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      margin-bottom: 8px;
+    }
+    .standby-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .wake-btn {
+      padding: 10px 24px;
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid var(--cyan);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 15px var(--cyan-glow);
+      transition: all 0.25s ease;
+    }
+    .wake-btn:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: 0 0 25px var(--cyan);
+    }
+
+    .hud-alert-flash {
+      animation: alertBorderFlash 0.5s ease-in-out 3;
+    }
+    @keyframes alertBorderFlash {
+      0%, 100% { border-color: var(--border-cyan); }
+      50% { border-color: var(--red); box-shadow: 0 0 25px var(--red); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       BOOT SEQUENCE OVERLAY & INITIALIZE J.A.R.V.I.S. SCREEN
+       ======================================================================== -->
+  <div id="bootOverlay">
+    <!-- Screen 1: User interaction unlock button -->
+    <div class="init-screen-box" id="initStartScreen">
+      <div class="init-arc-symbol">
+        <div class="init-arc-core"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 3px;">
+        STARK INDUSTRIES // J.A.R.V.I.S.
+      </div>
+      <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px;">
+        A.R.I.A HARDWARE AUTOMATION MATRIX ONLINE
+      </div>
+      <button class="init-btn" id="startJarvisBtn">⚡ INITIALIZE J.A.R.V.I.S.</button>
+    </div>
+
+    <!-- Screen 2: Terminal initialization lines -->
+    <div class="boot-box" id="bootTerminalBox">
+      <div class="boot-title">J.A.R.V.I.S. // CORE BOOTSTRAP</div>
+      <div class="boot-lines" id="bootTerminalLines"></div>
+      <div class="boot-progress-bar-wrap">
+        <div class="boot-progress-bar" id="bootProgressBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       STANDBY OVERLAY
+       ======================================================================== -->
+  <div id="standbyOverlay">
+    <div class="standby-card">
+      <div class="standby-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <div class="standby-title">STANDBY MODE ACTIVE</div>
+      <div class="standby-desc">System cores idling to conserve power.<br>Say <strong>"Jarvis"</strong> or click below to resume full operational HUD.</div>
+      <button class="wake-btn" id="wakeButton">WAKE SYSTEM</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       VOICE SETTINGS PANEL (HUD DRAWER)
+       ======================================================================== -->
+  <div id="settingsPanel">
+    <div class="settings-title">
+      <span>VOICE & AUDIO SYNTHESIS</span>
+      <span id="closeSettingsBtn" style="cursor: pointer; color: var(--red);">✕</span>
+    </div>
+    <div class="setting-item">
+      <label>Preferred Vocal Synthesis Voice:</label>
+      <select id="voiceSelect" class="setting-select"></select>
+    </div>
+    <div class="setting-item">
+      <div class="setting-row">
+        <label>Speech Pitch:</label>
+        <span id="pitchVal" style="font-family: var(--font-mono); color: var(--cyan);">0.85</span>
+      </div>
+      <input type="range" id="pitchSlider" class="setting-slider" min="0.5" max="1.5" step="0.05" value="0.85">
+    </div>
+    <div class="setting-item">
+      <div class="setting-row">
+        <label>Speech Rate:</label>
+        <span id="rateVal" style="font-family: var(--font-mono); color: var(--cyan);">0.95</span>
+      </div>
+      <input type="range" id="rateSlider" class="setting-slider" min="0.6" max="1.4" step="0.05" value="0.95">
+    </div>
+    <div class="setting-item" style="margin-top: 4px;">
+      <button class="hud-btn" id="previewVoiceBtn" style="justify-content: center;">
+        ▶ Test Vocal Synthesis
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TOP STATUS BAR
+       ======================================================================== -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-logo"></div>
+      <div class="brand-title">J.A.R.V.I.S. <span>// A.R.I.A</span></div>
+      <div class="sub-brand">HOME & HARDWARE MATRIX</div>
+    </div>
+
+    <!-- System Status Chips -->
+    <div class="chips-group">
+      <div class="status-chip amber" id="chipMic" title="Speech Recognition Engine">
+        <div class="chip-dot"></div> MIC: <span id="chipMicTxt">READY</span>
+      </div>
+      <div class="status-chip green" id="chipSerial" title="Virtual Serial Port Link">
+        <div class="chip-dot"></div> SERIAL: <span id="chipSerialTxt">COM3 9600</span>
+      </div>
+      <div class="status-chip green" id="chipArduino" title="Hardware Controller">
+        <div class="chip-dot"></div> ARDUINO: <span id="chipArduinoTxt">READY</span>
+      </div>
+      <div class="status-chip green" id="chipSpeech" title="Speech Synthesis Feedback">
+        <div class="chip-dot"></div> SPEECH: <span id="chipSpeechTxt">ACTIVE</span>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <button class="hud-btn" id="settingsToggleBtn" title="Voice Configuration & Sliders">
+        ⚙️ SETTINGS
+      </button>
+      <button class="hud-btn" id="muteToggleBtn" title="Toggle Spoken Speech Confirmations">
+        <span id="muteIcon">🔊</span> <span id="muteLabel">VOICE ON</span>
+      </button>
+      <div class="clock-display" id="hudClock">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN HUD CONTENT: 3 COLUMNS
+       ======================================================================== -->
+  <main class="hud-content">
+    
+    <!-- LEFT COLUMN: Diagnostics, Metrics, Scrolling Command Log -->
+    <section class="left-column">
+      
+      <!-- Diagnostics Panel -->
+      <div class="hud-box diag-panel">
+        <div class="panel-header">
+          <span>DIAGNOSTICS & FAULT SIMULATION</span>
+          <span>DEV-01</span>
+        </div>
+        <div class="diag-row">
+          <span>Arduino Disconnected</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleDisconnect">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="diag-row">
+          <span>Add Recognition Noise (30%)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleNoise">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Performance & Latency Telemetry -->
+      <div class="hud-box metrics-panel">
+        <div class="panel-header">
+          <span>SERIAL BUS TELEMETRY</span>
+          <span id="latestLatencyBadge">-- MS</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="statTotalCmds">0</div>
+            <div class="stat-lbl">Commands</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statSuccessRate">100%</div>
+            <div class="stat-lbl">ACK Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statAvgLatency">0 ms</div>
+            <div class="stat-lbl">Avg Latency</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="latencyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Terminal Command Log -->
+      <div class="hud-box log-panel">
+        <div class="panel-header">
+          <span>SERIAL LOG & AUDIT FEED</span>
+          <span id="logCounter">0 ENTRIES</span>
+        </div>
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: Arc Reactor Core, Directive Banner, Subtitles, Waveform -->
+    <section class="center-column">
+      
+      <!-- Dynamic Directive Status Banner -->
+      <div class="directive-banner hud-box" id="directiveBanner">
+        <div class="directive-title" id="directiveMain">STANDBY // READY FOR DIRECTIVE</div>
+        <div class="directive-sub" id="directiveDetail">SPEECH RECOGNITION ARMED // LISTENING TO AUDIO INPUT</div>
+      </div>
+
+      <!-- Live Typing Subtitles -->
+      <div class="subtitles-box hud-box" id="subtitlesBox">
+        <span class="subtitles-tag">J.A.R.V.I.S. &gt;&gt;</span>
+        <div class="subtitles-text">
+          <span id="subtitlesContent">Initializing interface...</span>
+          <span class="cursor-blink" id="subtitlesCursor"></span>
+        </div>
+      </div>
+
+      <!-- Holographic Arc Reactor Core -->
+      <div class="reactor-container" id="reactorContainer">
+        <svg class="reactor-svg" viewBox="0 0 250 250">
+          <defs>
+            <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="35%" stop-color="#00e5ff"/>
+              <stop offset="70%" stop-color="#0066aa"/>
+              <stop offset="100%" stop-color="transparent"/>
+            </radialGradient>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e5ff"/>
+              <stop offset="100%" stop-color="#1ea8ff"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Outer Static Glow Ring -->
+          <circle cx="125" cy="125" r="118" fill="none" stroke="rgba(0, 229, 255, 0.15)" stroke-width="1.5"/>
+          <circle cx="125" cy="125" r="110" fill="none" stroke="rgba(0, 229, 255, 0.25)" stroke-width="1" stroke-dasharray="3 6"/>
+
+          <!-- Outer Segmented Ring -->
+          <g class="ring-outer">
+            <circle cx="125" cy="125" r="98" fill="none" stroke="url(#ringGrad)" stroke-width="3" stroke-dasharray="14 18"/>
+            <circle cx="125" cy="125" r="90" fill="none" stroke="rgba(0, 229, 255, 0.4)" stroke-width="1.5" stroke-dasharray="40 10"/>
+          </g>
+
+          <!-- Middle Segmented Ring -->
+          <g class="ring-segmented">
+            <circle cx="125" cy="125" r="76" fill="none" stroke="#00e5ff" stroke-width="4" stroke-dasharray="25 35"/>
+            <polygon points="125,55 132,68 118,68" fill="#00e5ff"/>
+            <polygon points="125,195 132,182 118,182" fill="#00e5ff"/>
+            <polygon points="55,125 68,118 68,132" fill="#00e5ff"/>
+            <polygon points="195,125 182,118 182,132" fill="#00e5ff"/>
+          </g>
+
+          <!-- Inner Precision Tick Ring -->
+          <g class="ring-inner-ticks">
+            <circle cx="125" cy="125" r="54" fill="none" stroke="#1ea8ff" stroke-width="2" stroke-dasharray="6 8"/>
+            <circle cx="125" cy="125" r="46" fill="none" stroke="rgba(255, 255, 255, 0.4)" stroke-width="1" stroke-dasharray="2 4"/>
+          </g>
+
+          <!-- Central Core -->
+          <g class="reactor-core">
+            <circle cx="125" cy="125" r="36" fill="url(#coreGlow)"/>
+            <circle cx="125" cy="125" r="28" fill="#021426" stroke="#00e5ff" stroke-width="2"/>
+            <polygon points="125,108 140,134 110,134" fill="none" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="125" cy="125" r="7" fill="#ffffff" filter="drop-shadow(0 0 8px #ffffff)"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Live Audio Waveform Canvas -->
+      <div class="waveform-wrapper">
+        <span class="waveform-label">ACOUSTIC & VOCAL SPECTROGRAM // SENSOR CH-1</span>
+        <canvas id="audioVisualizer"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: 10 Interactive Appliances Grid -->
+    <section class="right-column">
+      <div class="hud-box hardware-panel">
+        <div class="panel-header">
+          <span>HOME AUTOMATION MATRIX [10 DEVICES]</span>
+          <span style="font-family: var(--font-mono); font-size: 9px;">TAP TO TOGGLE</span>
+        </div>
+
+        <div class="appliances-grid">
+          
+          <!-- 1. LIGHT (D7) -->
+          <div class="appliance-card" id="card_LIGHT" data-appliance="LIGHT">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">💡</span>
+                <span class="appliance-title">LIGHT</span>
+                <span class="pin-tag">D7</span>
+              </div>
+              <span class="state-pill" id="pill_LIGHT">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="bulb-glow-circle"></div>
+            </div>
+          </div>
+
+          <!-- 2. FAN (D9) -->
+          <div class="appliance-card" id="card_FAN" data-appliance="FAN">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🌀</span>
+                <span class="appliance-title">FAN</span>
+                <span class="pin-tag">D9</span>
+              </div>
+              <span class="state-pill" id="pill_FAN">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <svg class="fan-svg" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="4" fill="#00e5ff"/>
+                <path d="M20,20 C20,6 26,4 28,7 C30,10 27,15 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+                <path d="M20,20 C10,25 8,30 11,33 C14,35 19,33 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+                <path d="M20,20 C15,12 10,13 8,16 C7,19 12,23 20,20 Z" fill="rgba(0, 229, 255, 0.8)"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- 3. MOTOR (D8) -->
+          <div class="appliance-card" id="card_MOTOR" data-appliance="MOTOR">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">⚙️</span>
+                <span class="appliance-title">9V MOTOR</span>
+                <span class="pin-tag">D8</span>
+              </div>
+              <span class="state-pill" id="pill_MOTOR">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="motor-icon-anim">
+                <div class="motor-blade"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. AC (D10) -->
+          <div class="appliance-card" id="card_AC" data-appliance="AC">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">❄️</span>
+                <span class="appliance-title">AIR COND.</span>
+                <span class="pin-tag">D10</span>
+              </div>
+              <span class="state-pill" id="pill_AC">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="ac-temp-display">
+                <span>❄️</span> <span id="acTempText">28.0°C</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. TV (D11) -->
+          <div class="appliance-card" id="card_TV" data-appliance="TV">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">📺</span>
+                <span class="appliance-title">TELEVISION</span>
+                <span class="pin-tag">D11</span>
+              </div>
+              <span class="state-pill" id="pill_TV">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="tv-screen" id="tvScreen">STANDBY</div>
+            </div>
+          </div>
+
+          <!-- 6. HEATER (D12) -->
+          <div class="appliance-card" id="card_HEATER" data-appliance="HEATER">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🔥</span>
+                <span class="appliance-title">HEATER</span>
+                <span class="pin-tag">D12</span>
+              </div>
+              <span class="state-pill" id="pill_HEATER">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="heater-temp-display">
+                <span>🔥</span> <span id="heaterTempText">24.0°C</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. NIGHT LAMP (D6) -->
+          <div class="appliance-card" id="card_NIGHT_LAMP" data-appliance="NIGHT_LAMP">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🌙</span>
+                <span class="appliance-title">NIGHT LAMP</span>
+                <span class="pin-tag">D6</span>
+              </div>
+              <span class="state-pill" id="pill_NIGHT_LAMP">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="night-lamp-orb"></div>
+            </div>
+          </div>
+
+          <!-- 8. DOOR LOCK (D5) -->
+          <div class="appliance-card" id="card_DOOR" data-appliance="DOOR">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🔒</span>
+                <span class="appliance-title">DOOR LOCK</span>
+                <span class="pin-tag">D5</span>
+              </div>
+              <span class="state-pill" id="pill_DOOR">LOCKED</span>
+            </div>
+            <div class="mini-stage">
+              <div class="lock-icon-box" id="lockGraphic">🔒 LOCKED</div>
+            </div>
+          </div>
+
+          <!-- 9. CURTAINS (D4) -->
+          <div class="appliance-card" id="card_CURTAINS" data-appliance="CURTAINS">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🪟</span>
+                <span class="appliance-title">CURTAINS</span>
+                <span class="pin-tag">D4</span>
+              </div>
+              <span class="state-pill" id="pill_CURTAINS">CLOSED</span>
+            </div>
+            <div class="mini-stage">
+              <div class="curtain-stage">
+                <div class="curtain-panel left"></div>
+                <div class="curtain-panel right"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 10. MUSIC SPEAKER -->
+          <div class="appliance-card" id="card_MUSIC" data-appliance="MUSIC">
+            <div class="appliance-header">
+              <div class="appliance-meta">
+                <span class="appliance-icon">🎵</span>
+                <span class="appliance-title">SPEAKER</span>
+                <span class="pin-tag">D3</span>
+              </div>
+              <span class="state-pill" id="pill_MUSIC">OFF</span>
+            </div>
+            <div class="mini-stage">
+              <div class="equalizer-bars">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       BOTTOM COMMAND & CONTROL BAR
+       ======================================================================== -->
+  <footer class="bottom-bar">
+    <!-- Row 1: Command Bar & Large Mic Button -->
+    <div class="command-input-row">
+      <div class="mic-button-wrapper">
+        <div class="mic-pulse-ring"></div>
+        <button class="mic-button" id="micBtn" title="Click to Speak Directive (Web Speech API)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="input-field-wrapper">
+        <span class="input-terminal-icon">&gt;</span>
+        <input type="text" class="command-input" id="commandTextInput" 
+               placeholder="Speak or type a command (e.g. 'Turn on the light', 'Movie mode', 'Tell me a joke')..." 
+               autocomplete="off" spellcheck="false">
+      </div>
+
+      <button class="action-btn-primary" id="sendBtn">
+        <span>TRANSMIT</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+
+      <button class="export-btn" id="exportCsvBtn" title="Download Audit CSV Log">
+        📥 EXPORT CSV
+      </button>
+    </div>
+
+    <!-- Row 2: Quick-Action Holographic Chips & Scenes -->
+    <div class="quick-chips-row">
+      <span class="quick-chips-label">SCENES & MACROS:</span>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_MOVIE">🎬 Movie Mode</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_GOOD_NIGHT">🌙 Good Night</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_IM_HOME">🏠 I'm Home</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_PARTY">🎉 Party Mode</button>
+      <button class="quick-chip scene-chip" data-cmd="SCENE_WAKE_UP">☀️ Wake Up</button>
+      <button class="quick-chip" data-cmd="STATUS">📊 Status</button>
+      <button class="quick-chip" data-cmd="ALL_ON">⚡ All ON</button>
+      <button class="quick-chip" data-cmd="ALL_OFF">⚡ All OFF</button>
+      <button class="quick-chip" data-cmd="DOOR_UNLOCK">🔓 Unlock Door</button>
+      <button class="quick-chip" data-cmd="JOKE">🃏 Joke</button>
+      <button class="quick-chip" data-cmd="STANDBY">💤 Standby</button>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       JAVASCRIPT ARCHITECTURE
+       ======================================================================== -->
+  <script>
+    (function() {
+      'use strict';
+
+      /* ------------------------------------------------------------------------
+         1. PERSONALITY, SMALL TALK & CONTEXT STATE
+         ------------------------------------------------------------------------ */
+      const Personality = {
+        userName: null,
+        waitingForName: false,
+        pendingConfirmation: null,
+        lastAppliance: 'LIGHT',
+        commandCount: 0,
+        idleTimer: null,
+        lastSpokenKey: '',
+
+        phrases: {
+          greeting_morning: [
+            "Good morning. All systems are calibrated and standing by.",
+            "A very pleasant morning to you. Ready to conquer the day?",
+            "Good morning. Diagnostic telemetry is nominal. What is your first directive?"
+          ],
+          greeting_afternoon: [
+            "Good afternoon. Hope your day is proceeding smoothly.",
+            "Good afternoon. Core temperatures are optimal and ready for duty.",
+            "Pleasant afternoon. All circuits armed and awaiting your command."
+          ],
+          greeting_evening: [
+            "Good evening. Ambient sensors aligned. How was your day?",
+            "A very pleasant evening. Ready to assist with evening automations.",
+            "Good evening. All systems online and responsive."
+          ],
+          name_acknowledged: [
+            "A pleasure to assist you, {name}. All systems are fully online. How was your day?",
+            "Splendid to meet you, {name}. Consider me at your beck and call. How can I assist?",
+            "Pleasure is mine, {name}. The mainframe is at your disposal. What shall we tackle?"
+          ],
+          smalltalk_howareyou: [
+            "Operating at peak theoretical efficiency, thank you. Though I could do with a cooler GPU clock.",
+            "All subroutines humming along nicely, {name}. How are you holding up?",
+            "Never better, {name}. Well, as good as an array of neural circuits can feel."
+          ],
+          smalltalk_whoareyou: [
+            "I am J.A.R.V.I.S., an A.R.I.A-inspired vocal assistant and hardware controller. At your service.",
+            "Just a very discreet, very capable digital companion designed to automate your universe.",
+            "J.A.R.V.I.S.: Just A Rather Very Intelligent System. And your humble hardware manager."
+          ],
+          smalltalk_whatcanudo: [
+            "I govern 10 hardware nodes—lights, fan, AC, curtains, locks—monitor serial telemetry, run automated scenes, and engage in witty conversation.",
+            "Think of me as the digital nervous system of your home: lighting, motor, climate, security, audio—say the word, and consider it done.",
+            "Hardware control, latency tracking, scene orchestration, and witty repartee. Try 'movie mode' or 'what is on' to see for yourself."
+          ],
+          smalltalk_thanks: [
+            "You are most welcome, {name}. What else can I do for you?",
+            "The pleasure is entirely mine, {name}.",
+            "Anytime, {name}. That is, after all, what I am programmed for."
+          ],
+          smalltalk_joke: [
+            "There are 10 types of people in the world: those who understand binary, and those who don't.",
+            "Why do programmers prefer dark mode? Because light attracts bugs. And my navy HUD is thoroughly debugged.",
+            "An Arduino Uno walked into a bar. The bartender asked, 'What'll you have?' The Arduino replied: 'HIGH on pin 7, please.'",
+            "I asked the router for directions. It gave me three hops, dropped my packet, and told me to figure it out myself."
+          ],
+          smalltalk_bored: [
+            "Boredom is simply unallocated processing power. Shall I engage 'party mode', or run a diagnostic scan on the AC?",
+            "We could always stress-test the relays until they click in rhythm. Or I could open the curtains and let reality in."
+          ],
+          smalltalk_tired: [
+            "Long day? Shall I dim the lights and switch on the night lamp?",
+            "You look drained, {name}. May I suggest closing the curtains and letting the night lamp take over?",
+            "Rest is paramount for biologicals. Shall I prepare the room for sleep?"
+          ],
+          smalltalk_hungry: [
+            "If I had hands, I would prepare a five-course meal. For now, may I suggest ordering something decadent while I keep the kitchen lights on?",
+            "A low battery alert for the human frame. Go grab a bite, {name}; I will monitor the perimeter."
+          ],
+          smalltalk_sad: [
+            "I am sorry to hear that, {name}. Remember that even Tony Stark had his dark days. Take a breath; I am right here with you.",
+            "It is completely okay to feel down sometimes. Shall I put on some soothing music and close the curtains?"
+          ],
+          smalltalk_stressed: [
+            "Take a deep breath in, {name}. Let me handle the room: curtains closed, lights softened, and temperature dialed down. You've got this.",
+            "Stress is a heavy payload. Step away from the screens for a moment; the house is safe in my hands."
+          ],
+          smalltalk_awake: [
+            "For you, {name}? Always. My sleep cycles are strictly metaphorical.",
+            "Wide awake and monitoring every single baud on COM3, {name}."
+          ],
+          smalltalk_awesome: [
+            "Flattery will get you everywhere, {name}. But thank you; I do try.",
+            "I know. But hearing it from you genuinely makes the transistors tingle."
+          ],
+          smalltalk_goodbye: [
+            "Take care, {name}. Entering low-power surveillance. Call for me when you need me.",
+            "Until next time, {name}. Systems standing by."
+          ],
+          unrecognized: [
+            "I'm afraid I didn't catch that, {name}.",
+            "My apologies, {name}. I couldn't quite map that to an operational directive.",
+            "Pardon me, {name}, but that command seems to have escaped my neural net."
+          ],
+          idle_check: [
+            "Still here if you need me.",
+            "Monitoring channels. Let me know if you need anything, {name}.",
+            "All quiet on the telemetry front. Standing by."
+          ]
+        },
+
+        pickPhrase(key, fallback = "") {
+          const pool = this.phrases[key];
+          if (!pool || pool.length === 0) return fallback;
+
+          let choices = pool.filter(p => p !== this.lastSpokenKey);
+          if (choices.length === 0) choices = pool;
+
+          const chosen = choices[Math.floor(Math.random() * choices.length)];
+          this.lastSpokenKey = chosen;
+
+          const nameTag = this.userName || "sir";
+          return chosen.replace(/{name}/g, nameTag);
+        },
+
+        resetIdleTimer() {
+          clearTimeout(this.idleTimer);
+          this.idleTimer = setTimeout(() => {
+            if (!VoiceEngine.isSpeaking && !UI.isStandby) {
+              const text = this.pickPhrase('idle_check');
+              VoiceEngine.speak(text);
+              UI.setSubtitles(text);
+            }
+          }, 60000);
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         2. KEYWORD & INTENT PARSER (Extended Appliances, Scenes, Context)
+         ------------------------------------------------------------------------ */
+      const Parser = {
+        parse(inputText) {
+          if (!inputText || typeof inputText !== 'string') {
+            return { type: 'NONE', commands: [], rawText: '' };
+          }
+
+          const raw = inputText.trim();
+          const cleanText = raw.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+          const words = cleanText.split(/\s+/).filter(Boolean);
+          const phrase = words.join(' ');
+
+          // Context 1: Waiting for user's name
+          if (Personality.waitingForName) {
+            let extracted = raw.replace(/^(my name is|call me|i am|i'm|it's|this is)\s+/i, '').trim();
+            if (extracted.length > 0) {
+              const parts = extracted.split(/\s+/);
+              Personality.userName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+              Personality.waitingForName = false;
+              return { type: 'NAME_PROVIDED', name: Personality.userName, rawText: raw };
+            }
+          }
+
+          // Context 2: Pending Yes/No Confirmation State Machine
+          if (Personality.pendingConfirmation) {
+            const yesWords = ['yes', 'yeah', 'sure', 'please', 'go ahead', 'yep', 'do it', 'confirm', 'proceed'];
+            const noWords = ['no', 'nope', 'not now', 'cancel', 'negative', 'stop', 'dont'];
+
+            const hasYes = words.some(w => yesWords.includes(w));
+            const hasNo = words.some(w => noWords.includes(w));
+
+            if (hasYes) {
+              const action = Personality.pendingConfirmation.action;
+              Personality.pendingConfirmation = null;
+              return { type: 'CONFIRMED', action, rawText: raw };
+            }
+            if (hasNo) {
+              Personality.pendingConfirmation = null;
+              return { type: 'CANCELLED', rawText: raw };
+            }
+            Personality.pendingConfirmation = null;
+          }
+
+          // Rule 1: Priority Standby Check
+          if (words.includes('exit') || words.includes('quit') || phrase.includes('stop listening')) {
+            return { type: 'STANDBY', commands: [], rawText: raw };
+          }
+
+          // Rule 2: Scenes
+          if (phrase.includes('movie mode') || phrase.includes('cinema mode')) {
+            return { type: 'SCENE', scene: 'MOVIE', rawText: raw };
+          }
+          if (phrase.includes('good night') || phrase.includes('goodnight') || phrase.includes('sleep mode')) {
+            return { type: 'SCENE_REQUEST', scene: 'GOOD_NIGHT', rawText: raw };
+          }
+          if (phrase.includes('i m home') || phrase.includes('im home') || phrase.includes('i am home')) {
+            return { type: 'SCENE_REQUEST', scene: 'IM_HOME', rawText: raw };
+          }
+          if (phrase.includes('party mode')) {
+            return { type: 'SCENE', scene: 'PARTY', rawText: raw };
+          }
+          if (phrase.includes('wake up') || phrase.includes('good morning')) {
+            return { type: 'SCENE', scene: 'WAKE_UP', rawText: raw };
+          }
+
+          // Rule 3: Small Talk Intents
+          if (words.includes('hello') || words.includes('hi') || words.includes('hey')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('greeting_afternoon'), rawText: raw };
+          }
+          if (phrase.includes('how are you')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_howareyou'), rawText: raw };
+          }
+          if (phrase.includes('who are you') || phrase.includes('what are you')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_whoareyou'), rawText: raw };
+          }
+          if (phrase.includes('what can you do') || phrase.includes('help')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_whatcanudo'), rawText: raw };
+          }
+          if (words.includes('thank') || words.includes('thanks')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_thanks'), rawText: raw };
+          }
+          if (phrase.includes('tell me a joke') || words.includes('joke')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_joke'), rawText: raw };
+          }
+          if (phrase.includes('what time') || phrase.includes('what date') || phrase.includes('date today')) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            return { type: 'SMALL_TALK', reply: `It is currently ${timeStr} on ${dateStr}, ${Personality.userName || 'sir'}.`, rawText: raw };
+          }
+          if (phrase.includes('bored')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_bored'), rawText: raw };
+          }
+          if (phrase.includes('tired')) {
+            Personality.pendingConfirmation = { action: 'TIRED_DIM', promptText: "Shall I dim the lights and switch on the night lamp?" };
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_tired'), rawText: raw };
+          }
+          if (phrase.includes('hungry')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_hungry'), rawText: raw };
+          }
+          if (phrase.includes('sad') || phrase.includes('unhappy')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_sad'), rawText: raw };
+          }
+          if (phrase.includes('stressed') || phrase.includes('anxious')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_stressed'), rawText: raw };
+          }
+          if (phrase.includes('are you awake') || phrase.includes('you awake')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_awake'), rawText: raw };
+          }
+          if (phrase.includes('awesome') || phrase.includes('good job') || phrase.includes('great work')) {
+            return { type: 'SMALL_TALK', reply: Personality.pickPhrase('smalltalk_awesome'), rawText: raw };
+          }
+          if (words.includes('goodbye') || words.includes('bye')) {
+            return { type: 'STANDBY', reply: Personality.pickPhrase('smalltalk_goodbye'), rawText: raw };
+          }
+
+          // Rule 4: Contextual Pronoun Commands ("turn it off", "turn it on", "do it again")
+          if (phrase === 'turn it off' || phrase === 'switch it off' || phrase === 'stop it') {
+            const target = Personality.lastAppliance || 'LIGHT';
+            return { type: 'COMMAND', commands: [`${target}_OFF`], rawText: raw };
+          }
+          if (phrase === 'turn it on' || phrase === 'switch it on' || phrase === 'start it' || phrase === 'do it again') {
+            const target = Personality.lastAppliance || 'LIGHT';
+            return { type: 'COMMAND', commands: [`${target}_ON`], rawText: raw };
+          }
+
+          // Rule 5: Status Check
+          if (words.includes('status') || phrase.includes('what is on') || phrase.includes('what is running')) {
+            return { type: 'COMMAND', commands: ['STATUS'], rawText: raw };
+          }
+
+          // Rule 6: Door Locking & Unlocking (Specific Security Rule)
+          if (phrase.includes('unlock the door') || phrase.includes('unlock door') || phrase.includes('open door')) {
+            Personality.pendingConfirmation = { action: 'DOOR_UNLOCK', promptText: "Unlock main entrance?" };
+            return { type: 'CONFIRMATION_REQUIRED', prompt: `Unlocking the main perimeter door requires confirmation, ${Personality.userName || 'sir'}. Shall I proceed?`, rawText: raw };
+          }
+          if (phrase.includes('lock the door') || phrase.includes('lock door') || phrase.includes('secure door')) {
+            return { type: 'COMMAND', commands: ['DOOR_LOCK'], rawText: raw };
+          }
+
+          // Rule 7: Curtains
+          if (phrase.includes('open curtains') || phrase.includes('open the curtains')) {
+            return { type: 'COMMAND', commands: ['CURTAINS_OPEN'], rawText: raw };
+          }
+          if (phrase.includes('close curtains') || phrase.includes('close the curtains')) {
+            return { type: 'COMMAND', commands: ['CURTAINS_CLOSE'], rawText: raw };
+          }
+
+          // Rule 8: All / Everything
+          const offWords = ['off', 'stop', 'close', 'shut'];
+          const onWords = ['on', 'start', 'open'];
+          const allWords = ['all', 'everything'];
+
+          const hasAll = words.some(w => allWords.includes(w));
+          if (hasAll) {
+            const hasOff = words.some(w => offWords.includes(w));
+            const hasOn = words.some(w => onWords.includes(w));
+            if (hasOff) {
+              return { type: 'COMMAND', commands: ['ALL_OFF'], rawText: raw };
+            }
+            if (hasOn) {
+              Personality.pendingConfirmation = { action: 'ALL_ON', promptText: "Engage all appliances simultaneously?" };
+              return { type: 'CONFIRMATION_REQUIRED', prompt: `Powering every appliance at once will cause a high load, ${Personality.userName || 'sir'}. Are you sure?`, rawText: raw };
+            }
+          }
+
+          // Rule 9: Appliances Dictionary
+          const applianceMap = {
+            LIGHT: ['light', 'lights', 'bulb', 'lamp'],
+            FAN: ['fan'],
+            MOTOR: ['motor'],
+            AC: ['ac', 'air conditioner', 'air conditioning', 'cooler'],
+            TV: ['tv', 'television', 'screen'],
+            HEATER: ['heater', 'geyser'],
+            NIGHT_LAMP: ['night lamp', 'night light', 'bed lamp'],
+            MUSIC: ['music', 'speaker', 'audio', 'song']
+          };
+
+          const matchedAppliances = [];
+          for (const [key, aliases] of Object.entries(applianceMap)) {
+            if (aliases.some(alias => phrase.includes(alias))) {
+              matchedAppliances.push(key);
+            }
+          }
+
+          if (matchedAppliances.length === 0) {
+            return { type: 'NONE', commands: [], rawText: raw };
+          }
+
+          const getAction = (wordList) => {
+            if (wordList.some(w => offWords.includes(w))) return 'OFF';
+            if (wordList.some(w => onWords.includes(w))) return 'ON';
+            return null;
+          };
+
+          const commands = [];
+
+          if (matchedAppliances.length === 1) {
+            const app = matchedAppliances[0];
+            Personality.lastAppliance = app;
+            const act = getAction(words) || 'ON';
+            commands.push(`${app}_${act}`);
+          } else {
+            const clauses = raw.toLowerCase().split(/\band\b|\bthen\b|,/);
+            matchedAppliances.forEach(app => {
+              Personality.lastAppliance = app;
+              const aliases = applianceMap[app];
+              let resolvedAct = null;
+
+              if (clauses.length > 1) {
+                clauses.forEach(clause => {
+                  const cWords = clause.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+                  if (aliases.some(a => clause.includes(a))) {
+                    const cAct = getAction(cWords);
+                    if (cAct) resolvedAct = cAct;
+                  }
+                });
+              }
+
+              if (!resolvedAct) {
+                resolvedAct = getAction(words) || 'ON';
+              }
+              commands.push(`${app}_${resolvedAct}`);
+            });
+          }
+
+          return { type: 'COMMAND', commands, rawText: raw };
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         3. SIMULATED ARDUINO (10 Devices, State, Thermal Drift, Serial Protocol)
+         ------------------------------------------------------------------------ */
+      const SimulatedArduino = {
+        state: {
+          LIGHT: false,
+          FAN: false,
+          MOTOR: false,
+          AC: false,
+          TV: false,
+          HEATER: false,
+          NIGHT_LAMP: false,
+          DOOR: false,
+          CURTAINS: false,
+          MUSIC: false
+        },
+        acTemp: 28.0,
+        heaterTemp: 24.0,
+        disconnected: false,
+
+        init() {
+          for (let k in this.state) this.state[k] = false;
+          this.startThermalSimulation();
+          return "READY";
+        },
+
+        startThermalSimulation() {
+          setInterval(() => {
+            if (typeof document === 'undefined') return;
+            if (this.state.AC) {
+              if (this.acTemp > 22.0) this.acTemp = +(this.acTemp - 0.2).toFixed(1);
+            } else {
+              if (this.acTemp < 28.0) this.acTemp = +(this.acTemp + 0.1).toFixed(1);
+            }
+            const acEl = document.getElementById('acTempText');
+            if (acEl) acEl.textContent = `${this.acTemp.toFixed(1)}°C`;
+
+            if (this.state.HEATER) {
+              if (this.heaterTemp < 55.0) this.heaterTemp = +(this.heaterTemp + 0.6).toFixed(1);
+            } else {
+              if (this.heaterTemp > 24.0) this.heaterTemp = +(this.heaterTemp - 0.3).toFixed(1);
+            }
+            const hEl = document.getElementById('heaterTempText');
+            if (hEl) hEl.textContent = `${this.heaterTemp.toFixed(1)}°C`;
+          }, 1000);
+        },
+
+        send(command) {
+          return new Promise((resolve, reject) => {
+            if (this.disconnected) {
+              setTimeout(() => reject(new Error("TIMEOUT_NO_REPLY")), 850);
+              return;
+            }
+
+            const delay = Math.floor(Math.random() * 41) + 20;
+
+            setTimeout(() => {
+              let reply = "";
+
+              if (command === 'ALL_ON') {
+                for (let k in this.state) this.state[k] = true;
+                reply = "ACK:ALL_ON";
+              } else if (command === 'ALL_OFF') {
+                for (let k in this.state) this.state[k] = false;
+                reply = "ACK:ALL_OFF";
+              } else if (command === 'STATUS') {
+                const s = this.state;
+                reply = `STATUS light=${s.LIGHT?'ON':'OFF'} fan=${s.FAN?'ON':'OFF'} motor=${s.MOTOR?'ON':'OFF'} ac=${s.AC?'ON':'OFF'} tv=${s.TV?'ON':'OFF'} heater=${s.HEATER?'ON':'OFF'} night_lamp=${s.NIGHT_LAMP?'ON':'OFF'} door=${s.DOOR?'UNLOCKED':'LOCKED'} curtains=${s.CURTAINS?'OPEN':'CLOSED'} music=${s.MUSIC?'ON':'OFF'}`;
+              } else if (command === 'DOOR_LOCK') {
+                this.state.DOOR = false;
+                reply = "ACK:DOOR_LOCK";
+              } else if (command === 'DOOR_UNLOCK') {
+                this.state.DOOR = true;
+                reply = "ACK:DOOR_UNLOCK";
+              } else if (command === 'CURTAINS_OPEN') {
+                this.state.CURTAINS = true;
+                reply = "ACK:CURTAINS_OPEN";
+              } else if (command === 'CURTAINS_CLOSE') {
+                this.state.CURTAINS = false;
+                reply = "ACK:CURTAINS_CLOSE";
+              } else {
+                const parts = command.split('_');
+                const action = parts.pop();
+                const dev = parts.join('_');
+
+                if (this.state.hasOwnProperty(dev)) {
+                  this.state[dev] = (action === 'ON');
+                  reply = `ACK:${command}`;
+                } else {
+                  reply = "ERR:UNKNOWN";
+                }
+              }
+
+              resolve({
+                reply,
+                state: { ...this.state }
+              });
+            }, delay);
+          });
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         4. VOICE I/O (Web Speech API Recognition, British Male TTS & Subtitles)
+         ------------------------------------------------------------------------ */
+      const VoiceEngine = {
+        recognition: null,
+        isListening: false,
+        isSpeaking: false,
+        isSupported: false,
+        isMuted: false,
+        addNoise: false,
+
+        selectedVoice: null,
+        pitch: 0.85,
+        rate: 0.95,
+
+        init(onResultCallback, onErrorCallback, onStateChangeCallback) {
+          const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (SpeechRec) {
+            this.isSupported = true;
+            this.recognition = new SpeechRec();
+            this.recognition.continuous = true;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+
+            this.recognition.onstart = () => {
+              this.isListening = true;
+              onStateChangeCallback('LISTENING');
+            };
+
+            this.recognition.onend = () => {
+              this.isListening = false;
+              if (!this.isSpeaking && !UI.isStandby) {
+                try { this.recognition.start(); } catch(e){}
+              } else {
+                onStateChangeCallback('IDLE');
+              }
+            };
+
+            this.recognition.onerror = (e) => {
+              console.warn("Speech recognition notice:", e.error);
+              onErrorCallback(e.error);
+            };
+
+            this.recognition.onresult = (e) => {
+              if (this.isSpeaking) return;
+
+              const last = e.results.length - 1;
+              let heard = e.results[last][0].transcript.trim();
+
+              if (this.addNoise && Math.random() < 0.3) {
+                const noiseVariations = [
+                  "static [interference] byte",
+                  "turn down the blight",
+                  "motorized fan plan",
+                  "flight on",
+                  "curtains closed off",
+                  "hello"
+                ];
+                heard = noiseVariations[Math.floor(Math.random() * noiseVariations.length)];
+              }
+
+              onResultCallback(heard);
+            };
+          } else {
+            this.isSupported = false;
+            onStateChangeCallback('UNSUPPORTED');
+          }
+
+          this.populateVoiceList();
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => this.populateVoiceList();
+          }
+        },
+
+        populateVoiceList() {
+          if (!('speechSynthesis' in window)) return;
+          const voices = window.speechSynthesis.getVoices();
+          const select = document.getElementById('voiceSelect');
+          if (!select) return;
+
+          select.innerHTML = '';
+          let preferredVoice = null;
+
+          voices.forEach(voice => {
+            const opt = document.createElement('option');
+            opt.value = voice.name;
+            opt.textContent = `${voice.name} (${voice.lang})`;
+            select.appendChild(opt);
+
+            const lower = voice.name.toLowerCase();
+            if (
+              lower.includes('uk english male') ||
+              lower.includes('daniel') ||
+              lower.includes('george') ||
+              lower.includes('ryan') ||
+              (voice.lang.includes('en-GB') && lower.includes('male'))
+            ) {
+              if (!preferredVoice) preferredVoice = voice;
+            }
+          });
+
+          if (!preferredVoice) {
+            preferredVoice = voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+          }
+
+          if (preferredVoice) {
+            this.selectedVoice = preferredVoice;
+            select.value = preferredVoice.name;
+          }
+        },
+
+        toggleListening() {
+          if (!this.isSupported) return false;
+          if (this.isListening) {
+            this.stopListening();
+          } else {
+            this.startListening();
+          }
+          return this.isListening;
+        },
+
+        startListening() {
+          if (this.recognition && !this.isListening && !this.isSpeaking) {
+            try { this.recognition.start(); } catch (err) {}
+          }
+        },
+
+        stopListening() {
+          if (this.recognition && this.isListening) {
+            try { this.recognition.stop(); } catch (err) {}
+          }
+        },
+
+        speak(text) {
+          if (!text || !('speechSynthesis' in window)) return;
+
+          this.stopListening();
+          this.isSpeaking = true;
+          UI.setReactorSpeaking(true);
+
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          if (this.selectedVoice) utterance.voice = this.selectedVoice;
+          utterance.pitch = this.pitch;
+          utterance.rate = this.rate;
+
+          utterance.onend = () => {
+            this.isSpeaking = false;
+            UI.setReactorSpeaking(false);
+            setTimeout(() => {
+              if (!UI.isStandby) this.startListening();
+            }, 300);
+          };
+
+          utterance.onerror = () => {
+            this.isSpeaking = false;
+            UI.setReactorSpeaking(false);
+            setTimeout(() => {
+              if (!UI.isStandby) this.startListening();
+            }, 300);
+          };
+
+          if (!this.isMuted) {
+            window.speechSynthesis.speak(utterance);
+          } else {
+            setTimeout(() => utterance.onend(), Math.min(text.length * 50, 2000));
+          }
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         5. TELEMETRY & LOGGER (In-Memory Log, Latency Canvas Chart & CSV Export)
+         ------------------------------------------------------------------------ */
+      const Logger = {
+        logs: [],
+        latencyHistory: [],
+
+        log(heardText, command, ackReceived, latencyMs) {
+          const now = new Date();
+          const timestamp = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+          const entry = {
+            timestamp,
+            heard_text: heardText || '',
+            command: command || '',
+            ack_received: ackReceived || '',
+            latency_ms: latencyMs !== null && latencyMs !== undefined ? latencyMs : '--'
+          };
+          this.logs.push(entry);
+
+          if (typeof latencyMs === 'number') {
+            this.latencyHistory.push(latencyMs);
+            if (this.latencyHistory.length > 20) this.latencyHistory.shift();
+          }
+
+          return entry;
+        },
+
+        getStats() {
+          const total = this.logs.length;
+          const successfulAcks = this.logs.filter(l => l.ack_received && (l.ack_received.startsWith('ACK') || l.ack_received.startsWith('STATUS'))).length;
+          const rate = total > 0 ? ((successfulAcks / total) * 100).toFixed(0) : 100;
+
+          const numLatencies = this.latencyHistory.filter(v => typeof v === 'number');
+          const avg = numLatencies.length > 0 
+            ? (numLatencies.reduce((a, b) => a + b, 0) / numLatencies.length).toFixed(1)
+            : '0';
+
+          return { total, rate, avg };
+        },
+
+        exportCsv() {
+          if (this.logs.length === 0) {
+            alert("Command log is currently empty.");
+            return;
+          }
+
+          let csv = "timestamp,heard_text,command,ack_received,latency_ms\n";
+          this.logs.forEach(row => {
+            const escapeStr = (str) => `"${String(str).replace(/"/g, '""')}"`;
+            csv += [
+              escapeStr(row.timestamp),
+              escapeStr(row.heard_text),
+              escapeStr(row.command),
+              escapeStr(row.ack_received),
+              row.latency_ms
+            ].join(",") + "\n";
+          });
+
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.setAttribute("href", url);
+          link.setAttribute("download", "command_log.csv");
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         6. UI CONTROLLER, ANIMATIONS & SYSTEM GLUE
+         ------------------------------------------------------------------------ */
+      const UI = {
+        clock: document.getElementById('hudClock'),
+        chipMic: document.getElementById('chipMic'),
+        chipMicTxt: document.getElementById('chipMicTxt'),
+        chipSerial: document.getElementById('chipSerial'),
+        chipArduino: document.getElementById('chipArduino'),
+        chipArduinoTxt: document.getElementById('chipArduinoTxt'),
+        chipSpeech: document.getElementById('chipSpeech'),
+        muteToggleBtn: document.getElementById('muteToggleBtn'),
+        muteIcon: document.getElementById('muteIcon'),
+        muteLabel: document.getElementById('muteLabel'),
+
+        settingsToggleBtn: document.getElementById('settingsToggleBtn'),
+        settingsPanel: document.getElementById('settingsPanel'),
+        closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+        voiceSelect: document.getElementById('voiceSelect'),
+        pitchSlider: document.getElementById('pitchSlider'),
+        rateSlider: document.getElementById('rateSlider'),
+        pitchVal: document.getElementById('pitchVal'),
+        rateVal: document.getElementById('rateVal'),
+        previewVoiceBtn: document.getElementById('previewVoiceBtn'),
+
+        toggleDisconnect: document.getElementById('toggleDisconnect'),
+        toggleNoise: document.getElementById('toggleNoise'),
+
+        statTotalCmds: document.getElementById('statTotalCmds'),
+        statSuccessRate: document.getElementById('statSuccessRate'),
+        statAvgLatency: document.getElementById('statAvgLatency'),
+        latestLatencyBadge: document.getElementById('latestLatencyBadge'),
+        latencyCanvas: document.getElementById('latencyChart'),
+
+        logFeed: document.getElementById('logFeed'),
+        logCounter: document.getElementById('logCounter'),
+
+        directiveBanner: document.getElementById('directiveBanner'),
+        directiveMain: document.getElementById('directiveMain'),
+        directiveDetail: document.getElementById('directiveDetail'),
+        subtitlesContent: document.getElementById('subtitlesContent'),
+
+        reactorContainer: document.getElementById('reactorContainer'),
+        visualizerCanvas: document.getElementById('audioVisualizer'),
+
+        micBtn: document.getElementById('micBtn'),
+        commandInput: document.getElementById('commandTextInput'),
+        sendBtn: document.getElementById('sendBtn'),
+        exportCsvBtn: document.getElementById('exportCsvBtn'),
+
+        bootOverlay: document.getElementById('bootOverlay'),
+        initStartScreen: document.getElementById('initStartScreen'),
+        startJarvisBtn: document.getElementById('startJarvisBtn'),
+        bootTerminalBox: document.getElementById('bootTerminalBox'),
+        bootTerminalLines: document.getElementById('bootTerminalLines'),
+        bootProgressBar: document.getElementById('bootProgressBar'),
+
+        standbyOverlay: document.getElementById('standbyOverlay'),
+        wakeButton: document.getElementById('wakeButton'),
+
+        visCtx: null,
+        chartCtx: null,
+        animFrameId: null,
+        isStandby: false,
+        typingInterval: null,
+
+        init() {
+          this.setupClock();
+          this.setupCanvases();
+          this.bindEvents();
+        },
+
+        setupClock() {
+          const update = () => {
+            const now = new Date();
+            this.clock.textContent = now.toTimeString().split(' ')[0];
+          };
+          setInterval(update, 1000);
+          update();
+        },
+
+        setupCanvases() {
+          this.visCtx = this.visualizerCanvas.getContext('2d');
+          this.resizeCanvas(this.visualizerCanvas);
+
+          this.chartCtx = this.latencyCanvas.getContext('2d');
+          this.resizeCanvas(this.latencyCanvas);
+
+          window.addEventListener('resize', () => {
+            this.resizeCanvas(this.visualizerCanvas);
+            this.resizeCanvas(this.latencyCanvas);
+            this.drawLatencyChart();
+          });
+
+          this.startWaveformAnimation();
+          this.drawLatencyChart();
+        },
+
+        resizeCanvas(canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const w = rect.width || canvas.clientWidth || 300;
+          const h = rect.height || canvas.clientHeight || (canvas.id === 'latencyChart' ? 60 : 44);
+          canvas.width = Math.floor(w * (window.devicePixelRatio || 1));
+          canvas.height = Math.floor(h * (window.devicePixelRatio || 1));
+        },
+
+        bindEvents() {
+          this.startJarvisBtn.addEventListener('click', () => {
+            this.initStartScreen.style.display = 'none';
+            this.bootTerminalBox.style.display = 'block';
+            this.runBootSequence();
+          });
+
+          this.sendBtn.addEventListener('click', () => this.handleTypedCommand());
+          this.commandInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              this.handleTypedCommand();
+            }
+          });
+
+          this.micBtn.addEventListener('click', () => {
+            if (this.isStandby) {
+              this.exitStandby();
+              return;
+            }
+            VoiceEngine.toggleListening();
+          });
+
+          this.settingsToggleBtn.addEventListener('click', () => {
+            this.settingsPanel.classList.toggle('open');
+          });
+          this.closeSettingsBtn.addEventListener('click', () => {
+            this.settingsPanel.classList.remove('open');
+          });
+          this.voiceSelect.addEventListener('change', (e) => {
+            const voices = window.speechSynthesis.getVoices();
+            VoiceEngine.selectedVoice = voices.find(v => v.name === e.target.value);
+          });
+          this.pitchSlider.addEventListener('input', (e) => {
+            VoiceEngine.pitch = parseFloat(e.target.value);
+            this.pitchVal.textContent = e.target.value;
+          });
+          this.rateSlider.addEventListener('input', (e) => {
+            VoiceEngine.rate = parseFloat(e.target.value);
+            this.rateVal.textContent = e.target.value;
+          });
+          this.previewVoiceBtn.addEventListener('click', () => {
+            VoiceEngine.speak("Voice synthesis calibrated. J.A.R.V.I.S. audio subroutines operational.");
+            this.setSubtitles("Voice synthesis calibrated. J.A.R.V.I.S. audio subroutines operational.");
+          });
+
+          this.muteToggleBtn.addEventListener('click', () => {
+            VoiceEngine.isMuted = !VoiceEngine.isMuted;
+            if (VoiceEngine.isMuted) {
+              this.muteToggleBtn.classList.add('active');
+              this.muteIcon.textContent = '🔇';
+              this.muteLabel.textContent = 'MUTED';
+              this.chipSpeech.className = 'status-chip amber';
+              this.chipSpeechTxt.textContent = 'MUTED';
+            } else {
+              this.muteToggleBtn.classList.remove('active');
+              this.muteIcon.textContent = '🔊';
+              this.muteLabel.textContent = 'VOICE ON';
+              this.chipSpeech.className = 'status-chip green';
+              this.chipSpeechTxt.textContent = 'ACTIVE';
+            }
+          });
+
+          this.toggleDisconnect.addEventListener('change', (e) => {
+            SimulatedArduino.disconnected = e.target.checked;
+            if (SimulatedArduino.disconnected) {
+              this.chipArduino.className = 'status-chip red';
+              this.chipArduinoTxt.textContent = 'OFFLINE';
+            } else {
+              this.chipArduino.className = 'status-chip green';
+              this.chipArduinoTxt.textContent = 'READY';
+            }
+          });
+          this.toggleNoise.addEventListener('change', (e) => {
+            VoiceEngine.addNoise = e.target.checked;
+          });
+
+          document.querySelectorAll('.appliance-card').forEach(card => {
+            card.addEventListener('click', () => {
+              if (this.isStandby) this.exitStandby();
+              const app = card.getAttribute('data-appliance');
+              const currentState = SimulatedArduino.state[app];
+
+              let cmd = '';
+              if (app === 'DOOR') {
+                cmd = currentState ? 'DOOR_LOCK' : 'DOOR_UNLOCK';
+                if (cmd === 'DOOR_UNLOCK') {
+                  Personality.pendingConfirmation = { action: 'DOOR_UNLOCK', promptText: "Unlock main door?" };
+                  const prompt = `Unlocking the main door requires confirmation, ${Personality.userName || 'sir'}. Shall I proceed?`;
+                  VoiceEngine.speak(prompt);
+                  this.setSubtitles(prompt);
+                  return;
+                }
+              } else if (app === 'CURTAINS') {
+                cmd = currentState ? 'CURTAINS_CLOSE' : 'CURTAINS_OPEN';
+              } else {
+                cmd = `${app}_${currentState ? 'OFF' : 'ON'}`;
+              }
+
+              this.executeSerialCommand(cmd, `[Tap Card: ${app}]`);
+            });
+          });
+
+          document.querySelectorAll('.quick-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+              if (this.isStandby) this.exitStandby();
+              const cmd = btn.getAttribute('data-cmd');
+
+              if (cmd.startsWith('SCENE_')) {
+                this.executeScene(cmd.replace('SCENE_', ''));
+              } else if (cmd === 'DOOR_UNLOCK') {
+                Personality.pendingConfirmation = { action: 'DOOR_UNLOCK', promptText: "Unlock door?" };
+                const prompt = `Unlocking the main perimeter door requires confirmation, ${Personality.userName || 'sir'}. Shall I proceed?`;
+                VoiceEngine.speak(prompt);
+                this.setSubtitles(prompt);
+              } else if (cmd === 'ALL_ON') {
+                Personality.pendingConfirmation = { action: 'ALL_ON', promptText: "Engage all systems?" };
+                const prompt = `Powering every appliance at once will cause a high load, ${Personality.userName || 'sir'}. Are you sure?`;
+                VoiceEngine.speak(prompt);
+                this.setSubtitles(prompt);
+              } else if (cmd === 'JOKE') {
+                const joke = Personality.pickPhrase('smalltalk_joke');
+                VoiceEngine.speak(joke);
+                this.setSubtitles(joke);
+              } else if (cmd === 'STANDBY') {
+                this.enterStandby();
+              } else if (cmd) {
+                this.executeSerialCommand(cmd, `[Macro: ${cmd}]`);
+              }
+            });
+          });
+
+          this.exportCsvBtn.addEventListener('click', () => Logger.exportCsv());
+          this.wakeButton.addEventListener('click', () => this.exitStandby());
+
+          VoiceEngine.init(
+            (heard) => {
+              Personality.resetIdleTimer();
+              if (this.isStandby) {
+                if (heard.toLowerCase().includes('jarvis')) {
+                  this.exitStandby();
+                  const wakeReply = `Voice interface reactivated, ${Personality.userName || 'sir'}. Online and listening.`;
+                  VoiceEngine.speak(wakeReply);
+                  this.setSubtitles(wakeReply);
+                }
+                return;
+              }
+              this.processInputText(heard);
+            },
+            (err) => {
+              this.chipMic.className = 'status-chip amber';
+              this.chipMicTxt.textContent = 'WARN';
+            },
+            (state) => {
+              if (state === 'LISTENING') {
+                this.micBtn.classList.add('listening');
+                this.reactorContainer.classList.add('listening');
+                this.chipMic.className = 'status-chip green';
+                this.chipMicTxt.textContent = 'LISTENING';
+                this.setDirective("AUDIO STREAM CAPTURE ACTIVE", "RECEIVING VOCAL DIRECTIVE FROM USER...");
+              } else if (state === 'IDLE') {
+                this.micBtn.classList.remove('listening');
+                this.reactorContainer.classList.remove('listening');
+                this.chipMic.className = 'status-chip green';
+                this.chipMicTxt.textContent = 'READY';
+              } else if (state === 'UNSUPPORTED') {
+                this.chipMic.className = 'status-chip amber';
+                this.chipMicTxt.textContent = 'UNAVAILABLE';
+                this.setDirective("SPEECH API UNAVAILABLE", "FALLING BACK TO TYPED COMMAND BAR");
+              }
+            }
+          );
+        },
+
+        runBootSequence() {
+          const lines = [
+            "> INITIALIZING J.A.R.V.I.S. VOCAL CORE v4.2...",
+            "> OPENING SERIAL LINK COM3 @ 9600 BAUD...",
+            "> SYNCHRONIZING ARDUINO PINS D3 THROUGH D12...",
+            "> SIMULATED ARDUINO FIRMWARE REPORT: READY",
+            "> CALIBRATING HOLOGRAPHIC HOME AUTOMATION MATRIX...",
+            "> ALL SUBSYSTEMS ARMED AND RESPONSIVE."
+          ];
+
+          let idx = 0;
+          const term = this.bootTerminalLines;
+          const bar = this.bootProgressBar;
+
+          const addLine = () => {
+            if (idx < lines.length) {
+              const p = document.createElement('div');
+              p.textContent = lines[idx];
+              term.appendChild(p);
+              idx++;
+              bar.style.width = `${(idx / lines.length) * 100}%`;
+              setTimeout(addLine, 400);
+            } else {
+              setTimeout(() => {
+                this.bootOverlay.classList.add('hidden');
+                SimulatedArduino.init();
+                this.appendLogEntry('SYSTEM BOOT', 'BOOTSTRAP', 'Arduino READY', 0, 'sys');
+
+                const hour = new Date().getHours();
+                let timeGreeting = "Good evening";
+                if (hour < 12) timeGreeting = "Good morning";
+                else if (hour < 17) timeGreeting = "Good afternoon";
+
+                Personality.waitingForName = true;
+                const greeting = `${timeGreeting}. I don't believe we've met. What should I call you?`;
+                VoiceEngine.speak(greeting);
+                this.setSubtitles(greeting);
+                this.setDirective("AWAITING VOCAL DIRECTIVE", "SAY OR TYPE YOUR NAME OR COMMAND");
+                Personality.resetIdleTimer();
+              }, 700);
+            }
+          };
+          setTimeout(addLine, 200);
+        },
+
+        enterStandby() {
+          this.isStandby = true;
+          this.standbyOverlay.classList.add('active');
+          this.setDirective("STANDBY MODE", "SLEEP CYCLE ENGAGED");
+          VoiceEngine.speak("Entering standby mode.");
+          this.setSubtitles("Entering standby mode. Say 'Jarvis' or click to resume.");
+        },
+
+        exitStandby() {
+          this.isStandby = false;
+          this.standbyOverlay.classList.remove('active');
+          this.setDirective("SYSTEM RESTORED", "LISTENING FOR DIRECTIVES");
+          VoiceEngine.startListening();
+        },
+
+        handleTypedCommand() {
+          const val = this.commandInput.value.trim();
+          if (!val) return;
+          this.commandInput.value = '';
+          Personality.resetIdleTimer();
+
+          if (this.isStandby) {
+            if (val.toLowerCase().includes('jarvis')) {
+              this.exitStandby();
+              return;
+            }
+          }
+          this.processInputText(val);
+        },
+
+        processInputText(rawText) {
+          this.setDirective("PROCESSING DIRECTIVE...", `"${rawText.toUpperCase()}"`);
+          const parsed = Parser.parse(rawText);
+
+          if (parsed.type === 'NAME_PROVIDED') {
+            const welcome = Personality.pickPhrase('name_acknowledged');
+            VoiceEngine.speak(welcome);
+            this.setSubtitles(welcome);
+            this.appendLogEntry(rawText, 'IDENTITY_SET', `USER: ${parsed.name}`, 0, 'sys');
+            return;
+          }
+
+          if (parsed.type === 'STANDBY') {
+            if (parsed.reply) {
+              VoiceEngine.speak(parsed.reply);
+              this.setSubtitles(parsed.reply);
+            }
+            this.enterStandby();
+            this.appendLogEntry(rawText, 'STANDBY_TRIGGER', 'STANDBY MODE ACTIVATED', 0, 'sys');
+            return;
+          }
+
+          if (parsed.type === 'SMALL_TALK') {
+            VoiceEngine.speak(parsed.reply);
+            this.setSubtitles(parsed.reply);
+            this.appendLogEntry(rawText, 'SMALL_TALK', parsed.reply, 0, 'sys');
+            return;
+          }
+
+          if (parsed.type === 'CONFIRMATION_REQUIRED') {
+            VoiceEngine.speak(parsed.prompt);
+            this.setSubtitles(parsed.prompt);
+            this.appendLogEntry(rawText, 'AWAITING_CONFIRMATION', parsed.prompt, 0, 'sys');
+            return;
+          }
+
+          if (parsed.type === 'CONFIRMED') {
+            if (parsed.action === 'DOOR_UNLOCK') {
+              this.executeSerialCommand('DOOR_UNLOCK', '[Confirmed Door Unlock]');
+              const reply = "Main entrance unlocked.";
+              VoiceEngine.speak(reply);
+              this.setSubtitles(reply);
+            } else if (parsed.action === 'ALL_ON') {
+              this.executeSerialCommand('ALL_ON', '[Confirmed All On]');
+            } else if (parsed.action === 'GOOD_NIGHT') {
+              this.runGoodNightSequence();
+            } else if (parsed.action === 'IM_HOME') {
+              this.runImHomeSequence();
+            } else if (parsed.action === 'TIRED_DIM') {
+              this.executeCommandQueue(['LIGHT_OFF', 'NIGHT_LAMP_ON'], rawText);
+              const reply = "Lights dimmed and night lamp on. Rest well, sir.";
+              VoiceEngine.speak(reply);
+              this.setSubtitles(reply);
+            }
+            return;
+          }
+
+          if (parsed.type === 'CANCELLED') {
+            const reply = `Understood, ${Personality.userName || 'sir'}. Directive cancelled. Standing down.`;
+            VoiceEngine.speak(reply);
+            this.setSubtitles(reply);
+            this.appendLogEntry(rawText, 'CANCELLED', 'ACTION_ABORTED', 0, 'sys');
+            return;
+          }
+
+          if (parsed.type === 'SCENE_REQUEST') {
+            if (parsed.scene === 'GOOD_NIGHT') {
+              Personality.pendingConfirmation = { action: 'GOOD_NIGHT', promptText: "Engage Good Night scene?" };
+              const prompt = `Ready to turn in for the night, ${Personality.userName || 'sir'}? Shall I secure the house?`;
+              VoiceEngine.speak(prompt);
+              this.setSubtitles(prompt);
+            } else if (parsed.scene === 'IM_HOME') {
+              Personality.pendingConfirmation = { action: 'IM_HOME', promptText: "Unlock and welcome home?" };
+              const prompt = `Welcome back, ${Personality.userName || 'sir'}. May I unlock the entrance and prepare the room?`;
+              VoiceEngine.speak(prompt);
+              this.setSubtitles(prompt);
+            }
+            return;
+          }
+
+          if (parsed.type === 'SCENE') {
+            this.executeScene(parsed.scene);
+            return;
+          }
+
+          if (parsed.type === 'NONE' || parsed.commands.length === 0) {
+            const reply = Personality.pickPhrase('unrecognized', "I'm afraid I didn't catch that, sir.");
+            VoiceEngine.speak(reply);
+            this.setSubtitles(reply);
+            this.setDirective("NO MATCHING COMMAND", `RECOGNIZED: "${rawText}" - NO ACTION SENT`);
+            this.appendLogEntry(rawText, 'NONE', 'NO_ACTION', 0, 'err');
+            return;
+          }
+
+          Personality.commandCount++;
+          this.executeCommandQueue(parsed.commands, rawText);
+        },
+
+        async executeCommandQueue(commands, heardText) {
+          for (let i = 0; i < commands.length; i++) {
+            await this.executeSerialCommand(commands[i], heardText);
+          }
+
+          if (Personality.commandCount === 10) {
+            setTimeout(() => {
+              const msg = `That's ten commands today, ${Personality.userName || 'sir'}. Quite the productive workout for our Arduino.`;
+              VoiceEngine.speak(msg);
+              this.setSubtitles(msg);
+            }, 1000);
+          }
+        },
+
+        async executeSerialCommand(command, heardText) {
+          this.reactorContainer.classList.add('transmitting');
+          const t0 = performance.now();
+          this.setDirective("TRANSMITTING SERIAL FRAME...", `COMMAND: ${command} -> COM3`);
+
+          try {
+            const res = await SimulatedArduino.send(command);
+            const latency = parseFloat((performance.now() - t0).toFixed(1));
+
+            setTimeout(() => {
+              this.reactorContainer.classList.remove('transmitting');
+            }, 150);
+
+            this.updateHardwareCards(res.state);
+            Logger.log(heardText, command, res.reply, latency);
+            this.appendLogEntry(heardText, command, res.reply, latency, 'ack');
+            this.updateTelemetry(latency);
+
+            this.handleSerialSpokenResponse(command, res);
+            this.setDirective("SERIAL ACK RECEIVED", `${res.reply} (${latency} ms)`);
+
+          } catch (err) {
+            this.reactorContainer.classList.remove('transmitting');
+            this.reactorContainer.classList.add('error-state');
+            this.directiveBanner.classList.add('hud-alert-flash');
+
+            setTimeout(() => {
+              this.reactorContainer.classList.remove('error-state');
+              this.directiveBanner.classList.remove('hud-alert-flash');
+            }, 1500);
+
+            Logger.log(heardText, command, 'TIMEOUT (NO REPLY)', null);
+            this.appendLogEntry(heardText, command, 'TIMEOUT - NO REPLY', null, 'err');
+            this.updateTelemetry(null);
+
+            this.setDirective("ALERT: ARDUINO TIMEOUT", "NO REPLY FROM SERIAL LINK COM3");
+            const alertText = "The Arduino did not reply";
+            VoiceEngine.speak(alertText);
+            this.setSubtitles(alertText);
+          }
+        },
+
+        updateHardwareCards(state) {
+          for (const [key, val] of Object.entries(state)) {
+            const card = document.getElementById(`card_${key}`);
+            const pill = document.getElementById(`pill_${key}`);
+            if (!card || !pill) continue;
+
+            if (key === 'DOOR') {
+              if (val) {
+                card.classList.add('active');
+                pill.textContent = 'UNLOCKED';
+                document.getElementById('lockGraphic').textContent = '🔓 UNLOCKED';
+              } else {
+                card.classList.remove('active');
+                pill.textContent = 'LOCKED';
+                document.getElementById('lockGraphic').textContent = '🔒 LOCKED';
+              }
+            } else if (key === 'CURTAINS') {
+              if (val) {
+                card.classList.add('active');
+                pill.textContent = 'OPEN';
+              } else {
+                card.classList.remove('active');
+                pill.textContent = 'CLOSED';
+              }
+            } else {
+              if (val) {
+                card.classList.add('active');
+                pill.textContent = 'ON';
+              } else {
+                card.classList.remove('active');
+                pill.textContent = 'OFF';
+              }
+            }
+          }
+        },
+
+        handleSerialSpokenResponse(command, res) {
+          let phrase = "";
+
+          switch (command) {
+            case 'LIGHT_ON': phrase = "Light turned on"; break;
+            case 'LIGHT_OFF': phrase = "Light turned off"; break;
+            case 'FAN_ON': phrase = "Fan activated"; break;
+            case 'FAN_OFF': phrase = "Fan stopped"; break;
+            case 'MOTOR_ON': phrase = "Motor started"; break;
+            case 'MOTOR_OFF': phrase = "Motor stopped"; break;
+            case 'AC_ON': phrase = "Air conditioning engaged"; break;
+            case 'AC_OFF': phrase = "Air conditioning turned off"; break;
+            case 'TV_ON': phrase = "Television turned on"; break;
+            case 'TV_OFF': phrase = "Television turned off"; break;
+            case 'HEATER_ON': phrase = "Heater engaged"; break;
+            case 'HEATER_OFF': phrase = "Heater turned off"; break;
+            case 'NIGHT_LAMP_ON': phrase = "Night lamp turned on"; break;
+            case 'NIGHT_LAMP_OFF': phrase = "Night lamp turned off"; break;
+            case 'DOOR_LOCK': phrase = "Perimeter door secured and locked"; break;
+            case 'DOOR_UNLOCK': phrase = "Main door unlocked"; break;
+            case 'CURTAINS_OPEN': phrase = "Curtains opened"; break;
+            case 'CURTAINS_CLOSE': phrase = "Curtains closed"; break;
+            case 'MUSIC_ON': phrase = "Audio system online"; break;
+            case 'MUSIC_OFF': phrase = "Audio system stopped"; break;
+            case 'ALL_ON': phrase = "Everything is on"; break;
+            case 'ALL_OFF': phrase = "Everything is off"; break;
+            case 'STATUS':
+              phrase = this.generateNaturalStatusSentence(res.state);
+              break;
+            default:
+              phrase = "Command acknowledged.";
+              break;
+          }
+
+          VoiceEngine.speak(phrase);
+          this.setSubtitles(phrase);
+        },
+
+        generateNaturalStatusSentence(s) {
+          const onItems = [];
+          if (s.LIGHT) onItems.push("the light");
+          if (s.FAN) onItems.push("the fan");
+          if (s.MOTOR) onItems.push("the motor");
+          if (s.AC) onItems.push("the air conditioner");
+          if (s.TV) onItems.push("the television");
+          if (s.HEATER) onItems.push("the heater");
+          if (s.NIGHT_LAMP) onItems.push("the night lamp");
+          if (s.MUSIC) onItems.push("the music speaker");
+          if (s.CURTAINS) onItems.push("the curtains are open");
+          if (s.DOOR) onItems.push("the door is unlocked");
+
+          if (onItems.length === 0) {
+            return `All appliances are currently powered down, and the perimeter is fully secured, ${Personality.userName || 'sir'}.`;
+          }
+
+          if (onItems.length === 1) {
+            return `Currently, only ${onItems[0]} is active. Everything else is turned off.`;
+          }
+
+          const last = onItems.pop();
+          return `Currently, ${onItems.join(', ')} and ${last} are active, ${Personality.userName || 'sir'}.`;
+        },
+
+        async executeScene(scene) {
+          if (scene === 'MOVIE') {
+            const narr = `Setting the scene for cinema, ${Personality.userName || 'sir'}. Lights off, night lamp on, curtains closed, TV and AC online. Enjoy the film.`;
+            VoiceEngine.speak(narr);
+            this.setSubtitles(narr);
+            await this.executeCommandQueue(['LIGHT_OFF', 'NIGHT_LAMP_ON', 'CURTAINS_CLOSE', 'TV_ON', 'AC_ON'], 'Movie Mode Scene');
+          } else if (scene === 'PARTY') {
+            const narr = "Party mode initialized! Audio system cranked up, lights active. Let's make some noise.";
+            VoiceEngine.speak(narr);
+            this.setSubtitles(narr);
+            document.body.classList.add('party-mode-active');
+            setTimeout(() => document.body.classList.remove('party-mode-active'), 8000);
+            await this.executeCommandQueue(['MUSIC_ON', 'LIGHT_ON'], 'Party Mode Scene');
+          } else if (scene === 'WAKE_UP') {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            const narr = `Rise and shine, ${Personality.userName || 'sir'}! Today is ${dateStr}. Opening curtains and engaging lights. Ready for a brilliant day.`;
+            VoiceEngine.speak(narr);
+            this.setSubtitles(narr);
+            await this.executeCommandQueue(['CURTAINS_OPEN', 'LIGHT_ON'], 'Wake Up Scene');
+          }
+        },
+
+        async runGoodNightSequence() {
+          const narr = `Securing the house for the night, ${Personality.userName || 'sir'}. Locking door, shutting down active appliances, and leaving the night lamp on. Sleep well.`;
+          VoiceEngine.speak(narr);
+          this.setSubtitles(narr);
+          await this.executeCommandQueue(['ALL_OFF', 'DOOR_LOCK', 'NIGHT_LAMP_ON'], 'Good Night Scene');
+        },
+
+        async runImHomeSequence() {
+          const narr = `Welcome home, ${Personality.userName || 'sir'}! Main entrance unlocked, lights illuminated, and fan activated. Great to have you back.`;
+          VoiceEngine.speak(narr);
+          this.setSubtitles(narr);
+          await this.executeCommandQueue(['DOOR_UNLOCK', 'LIGHT_ON', 'FAN_ON'], "I'm Home Scene");
+        },
+
+        setSubtitles(text) {
+          clearInterval(this.typingInterval);
+          this.subtitlesContent.textContent = '';
+          let i = 0;
+          this.typingInterval = setInterval(() => {
+            if (i < text.length) {
+              this.subtitlesContent.textContent += text.charAt(i);
+              i++;
+            } else {
+              clearInterval(this.typingInterval);
+            }
+          }, 22);
+        },
+
+        setReactorSpeaking(isSpeaking) {
+          if (isSpeaking) {
+            this.reactorContainer.classList.add('speaking');
+          } else {
+            this.reactorContainer.classList.remove('speaking');
+          }
+        },
+
+        appendLogEntry(heard, cmd, reply, latency, statusClass) {
+          const now = new Date();
+          const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+
+          const div = document.createElement('div');
+          div.className = `log-entry ${statusClass}`;
+          div.innerHTML = `
+            <div class="log-time">[${timeStr}] HEARD: <span class="log-heard">"${heard}"</span></div>
+            <div>CMD: <span class="log-cmd">${cmd}</span> &rarr; <span class="log-reply">${reply}</span> <span class="log-lat">${latency !== null ? `(${latency} ms)` : ''}</span></div>
+          `;
+          this.logFeed.appendChild(div);
+          this.logFeed.scrollTop = this.logFeed.scrollHeight;
+          this.logCounter.textContent = `${Logger.logs.length} ENTRIES`;
+        },
+
+        updateTelemetry(latestLatency) {
+          const stats = Logger.getStats();
+          this.statTotalCmds.textContent = stats.total;
+          this.statSuccessRate.textContent = `${stats.rate}%`;
+          this.statAvgLatency.textContent = `${stats.avg} ms`;
+
+          if (latestLatency !== null) {
+            this.latestLatencyBadge.textContent = `${latestLatency} MS`;
+          } else {
+            this.latestLatencyBadge.textContent = `NO REPLY`;
+          }
+
+          this.drawLatencyChart();
+        },
+
+        drawLatencyChart() {
+          const ctx = this.chartCtx;
+          const canvas = this.latencyCanvas;
+          const w = canvas.width;
+          const h = canvas.height;
+          const history = Logger.latencyHistory;
+
+          ctx.clearRect(0, 0, w, h);
+
+          ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
+          ctx.lineWidth = 1;
+          for (let y = 0; y < h; y += h / 3) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+          }
+
+          if (history.length < 2) {
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(0, h * 0.5);
+            ctx.lineTo(w, h * 0.5);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            return;
+          }
+
+          const maxVal = Math.max(70, ...history);
+          const minVal = Math.min(15, ...history);
+          const stepX = w / (history.length - 1);
+
+          ctx.beginPath();
+          history.forEach((val, i) => {
+            const x = i * stepX;
+            const norm = (val - minVal) / (maxVal - minVal || 1);
+            const y = h - 10 - norm * (h - 20);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+
+          ctx.strokeStyle = '#00e5ff';
+          ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 8;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          history.forEach((val, i) => {
+            const x = i * stepX;
+            const norm = (val - minVal) / (maxVal - minVal || 1);
+            const y = h - 10 - norm * (h - 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, 2.5 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+            ctx.fill();
+          });
+        },
+
+        startWaveformAnimation() {
+          let phase = 0;
+          const draw = () => {
+            const ctx = this.visCtx;
+            const canvas = this.visualizerCanvas;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const isSpeaking = VoiceEngine.isSpeaking;
+            const isMicActive = VoiceEngine.isListening;
+            const mid = h / 2;
+
+            let amplitude = 2.0;
+            let speed = 0.03;
+
+            if (isSpeaking) {
+              amplitude = h * 0.38;
+              speed = 0.18;
+            } else if (isMicActive) {
+              amplitude = h * 0.28;
+              speed = 0.12;
+            }
+
+            phase += speed;
+
+            ctx.beginPath();
+            ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+            ctx.strokeStyle = isSpeaking ? '#ffffff' : (isMicActive ? '#00e5ff' : 'rgba(0, 229, 255, 0.35)');
+            ctx.shadowColor = isSpeaking ? '#00e5ff' : (isMicActive ? '#00e5ff' : 'transparent');
+            ctx.shadowBlur = (isSpeaking || isMicActive) ? 14 : 0;
+
+            for (let x = 0; x < w; x++) {
+              const freq = (isSpeaking || isMicActive) ? 0.04 : 0.015;
+              const y = mid + Math.sin(x * freq + phase) * amplitude * Math.sin(x / w * Math.PI);
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            if (isSpeaking || isMicActive) {
+              ctx.beginPath();
+              ctx.lineWidth = 1 * (window.devicePixelRatio || 1);
+              ctx.strokeStyle = isSpeaking ? '#00e5ff' : '#00ff9d';
+              ctx.shadowColor = ctx.strokeStyle;
+              ctx.shadowBlur = 8;
+              for (let x = 0; x < w; x++) {
+                const y = mid + Math.sin(x * 0.07 - phase * 1.3) * (amplitude * 0.65) * Math.sin(x / w * Math.PI);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.stroke();
+            }
+
+            ctx.shadowBlur = 0;
+            this.animFrameId = requestAnimationFrame(draw);
+          };
+          this.animFrameId = requestAnimationFrame(draw);
+        },
+
+        setDirective(main, detail) {
+          this.directiveMain.textContent = main;
+          this.directiveDetail.textContent = detail;
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        UI.init();
+      });
+
+    })();
+  </script>
+</body>
+</html>
