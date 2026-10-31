@@ -1,0 +1,5 @@
+{
+  "name": "aria-jarvis",
+  "cleanUrls": true,
+  "outputDirectory": "frontend/www"
+}
