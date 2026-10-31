@@ -2,6 +2,13 @@
 
 > **Advanced Responsive Intelligent Assistant (A.R.I.A)** — Inspired by Tony Stark's J.A.R.V.I.S., engineered with a sci-fi holographic HUD, conversational voice synthesis, simulated/physical Arduino Uno dual-mode serial control, low-voltage relay automation, telemetry logging, and cross-platform Android mobile deployment.
 
+[![Direct APK Download](https://img.shields.io/badge/Download_APK-v1.0.0_Ready-00e5ff?style=for-the-badge&logo=android&logoColor=black)](https://github.com/Madhav-does/aria-jarvis/releases/download/v1.0.0/jarvis-aria-v1.0.0.apk)
+[![Live Web Demo](https://img.shields.io/badge/Vercel_Live_Demo-Online-00ff88?style=for-the-badge&logo=vercel&logoColor=black)](https://www-blue-ten.vercel.app)
+[![GitHub Release](https://img.shields.io/github/v/release/Madhav-does/aria-jarvis?style=for-the-badge&color=1ea8ff)](https://github.com/Madhav-does/aria-jarvis/releases/latest)
+
+> 📲 **Direct Mobile Download:** [**Download `jarvis-aria-v1.0.0.apk`**](https://github.com/Madhav-does/aria-jarvis/releases/download/v1.0.0/jarvis-aria-v1.0.0.apk) *(~4.1 MB)*  
+> 🌐 **Live Web Application (Vercel):** [**https://www-blue-ten.vercel.app**](https://www-blue-ten.vercel.app)
+
 ---
 
 ## 1. System Architecture
