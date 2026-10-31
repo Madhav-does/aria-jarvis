@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#02070d">
   <title>J.A.R.V.I.S. // A.R.I.A. Hardware Integration HUD</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -105,6 +109,12 @@
       </button>
     </div>
     <div id="backendFeedbackTxt" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--cyan); margin-top: 6px; min-height: 18px;"></div>
+    <div style="margin: 14px 0 10px 0; border-top: 1px dashed var(--border-cyan);"></div>
+    <div class="setting-item">
+      <button class="hud-btn" id="mobileExportBtn" style="width: 100%; justify-content: center; background: rgba(0, 229, 255, 0.1);">
+        📥 Export Audit CSV Log
+      </button>
+    </div>
   </div>
 
   <!-- ========================================================================
@@ -147,10 +157,26 @@
     </div>
   </header>
 
+  <!-- Mobile Segmented Navigation Switcher (Active on Phones/Tablets) -->
+  <nav class="mobile-nav-bar" id="mobileNavBar">
+    <button class="mobile-nav-tab active" data-tab="center" id="tabCoreBtn">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">CORE HUD</span>
+    </button>
+    <button class="mobile-nav-tab" data-tab="right" id="tabDevicesBtn">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">DEVICES (10)</span>
+    </button>
+    <button class="mobile-nav-tab" data-tab="left" id="tabTelemetryBtn">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">TELEMETRY</span>
+    </button>
+  </nav>
+
   <!-- ========================================================================
-       MAIN HUD CONTENT: 3 COLUMNS
+       MAIN HUD CONTENT: RESPONSIVE ADAPTIVE LAYOUT
        ======================================================================== -->
-  <main class="hud-content">
+  <main class="hud-content tab-center">
     
     <!-- LEFT COLUMN: Diagnostics, Metrics, Scrolling Command Log -->
     <section class="left-column">

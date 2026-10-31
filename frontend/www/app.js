@@ -1172,6 +1172,26 @@
           });
 
           this.exportCsvBtn.addEventListener('click', () => Logger.exportCsv());
+          const mobileExportBtn = document.getElementById('mobileExportBtn');
+          if (mobileExportBtn) {
+            mobileExportBtn.addEventListener('click', () => Logger.exportCsv());
+          }
+
+          // Mobile Navigation Tabs
+          const mobileTabs = document.querySelectorAll('.mobile-nav-tab');
+          const hudContent = document.querySelector('.hud-content');
+          mobileTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+              mobileTabs.forEach(t => t.classList.remove('active'));
+              tab.classList.add('active');
+              const target = tab.getAttribute('data-tab');
+              if (hudContent) {
+                hudContent.classList.remove('tab-center', 'tab-right', 'tab-left');
+                hudContent.classList.add(`tab-${target}`);
+                hudContent.scrollTop = 0;
+              }
+            });
+          });
           this.wakeButton.addEventListener('click', () => this.exitStandby());
 
           VoiceEngine.init(
